@@ -1,5 +1,13 @@
+'''
+Simulating heat diffusion over a uniform 1d pure copper rod by solving the heat equation.
+To change the initial conditions and boundary conditions, change the globals BC and IC.
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
+
+BC = 100
+IC = 20
 
 # defs
 a = 110
@@ -13,12 +21,12 @@ dt = dx ** 2 / (2 * a)
 t_nodes = int(time/dt)
 
 # Init conditions
-u = np.zeros(nodes) + 20 # plate initially at 20 degrees c
+u = np.zeros(nodes) + IC # plate initially at IC temp
 
 
-# boundary conditions
-u[0] = 100
-u[-1] = 100
+
+u[0] = BC
+u[-1] = BC
 
 # visualization
 fig, ax = plt.subplots()
@@ -34,8 +42,8 @@ for step in range(t_nodes):
     for i in range(1, nodes - 1):
         u[i] = dt * a * (w[i - 1] - (2 * w[i]) + w[i + 1]) / dx ** 2 + w[i]
 
-    u[0] = 100
-    u[-1] = 100
+    u[0] = BC
+    u[-1] = BC
 
     counter += dt
 
