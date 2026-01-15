@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 BC = 100
 IC = 20
+
 # defs
 a = 110
 length = 50 #mm
