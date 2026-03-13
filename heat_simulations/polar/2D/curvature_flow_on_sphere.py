@@ -119,13 +119,6 @@ def laplacian(f,r,dr,theta,dtheta):
     # Second derivative of theta
     u_theta_theta = (w[i, jp] - 2*w[i, j] + w[i, jm])/ dtheta**2
 
-# def set_boundary(w:np.ndarray, theta):
-#     '''returns a copy of w with boundary conditions enforced. W should be a 2d array representing
-#     the temp at one time t. w[i, j] is temp at radius i, angle j for a given time.'''
-#     l = w.copy()
-#     l[-1, :] = 2 + np.cos(10 * theta)
-#     return l
-
 
 def plot_frames_with_slider(frames, frame_times, X, Y):
     if len(frames) == 0:

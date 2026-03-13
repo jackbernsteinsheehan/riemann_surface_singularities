@@ -21,13 +21,15 @@ In `first_passes`, you'll find the first simulations we created, like the initia
 ### `heat_simulations/polar`
 In `polar`, you'll find our two directories:
 ### 2D:
-In the `polar/2D` directory, we have the `curvature_flow.py` and the `polar_2d.py` modules. 
+In the `polar/2D` directory, we have the `curvature_flow.py`, `curvature_flow_on_sphere.py` and the `polar_2d.py` modules. 
 `curvature_flow.py` is a simulation of (unnormalized) Ricci flow using the PDE $u_t=\Delta\log u$. Notice that the `sim_in_polar()` function takes default parameters for `a` (the diffusivity constant), `t` (the time interval over which we simulate), as well as the number of radial and angular samples. At the bottom of the file, you can tweak the parameters as you wish. Run the file to see the simulation. Here is an example: 
 ![alt text](img/conformal_cone.png)
 
 `polar_2d.py` is a simulation of classical heat flow, done in polar coordinates. You can similarly adjust the paramters as you wish. Here is a cool example from at two different time points: 
 ![alt text](img/polar_early_t.png)
 ![alt text](img/polar_late_t.png)
+
+`curvature_flow_on_sphere.py` is a simulation of Yamabe flow on a sphere. This is a work in progress, and is not yet fully implemented.
 
 ### symmetric:
 In the `polar/symmetric` folder are our first simulations in polar coordinates, which use radially symmetric initial conditions, allowing us to omit the angular derivative component of the laplacian. Here's an example of the one simulating curvature over a disk: ![alt text](img/cone.png)
