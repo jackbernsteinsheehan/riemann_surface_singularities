@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{C:/Users/aryay/OneDrive/Shared Files/Programs/Preamble.tex}
+
+
+\title{Geodesics on a Cone}
+\author{Arya Yae}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{The Geodesic Equation}
+Let $U\subseteq\C$ be an open region.  In the complex coordinate $z$, a conformal metric has the form $g=u(z)|\de z|^2$ where $u$ is called a \emph{weight function}.  Here $|\de z|^2$ represents the standard complex dot product.  At a point $p\in U$ and a vector $w$ starting at $p$, the norm of $w$ with respect to $g$ is $|w|_g=\sqrt{u(p)}|w|$, where $|w|$ is the standard norm.  Note that we've switched from the earlier convention $g=u^2|\de z|^2$ to match the M.R.S.\ paper.
+
+The connection induced by $g$ is given by $\nabla=\de+\del\log u$.  Evaluating this connection on a function $f$ gives
+\begin{equation}
+    \nabla f=\de f + (\del_z\log u)f\,\de z
+\end{equation}
+In the case where $\gamma\from[0,T)\to U$ is a geodesic, we can extend the derivative $\dot\gamma$ to a vector field on a tubular neighborhood of $\im\gamma$.  Since the tangent bundle of $U$ is trivial, a vector field is the same as a complex function.  Thus
+\begin{equation}\label{eqn: geodesic equation}
+    0=\nabla_{\dot\gamma}\dot\gamma=\ddot\gamma+(\partial_z\log u)\dot\gamma\cdot\langle\de z,\dot\gamma\rangle=\ddot\gamma+(\del_z\log u)\dot\gamma^2,
+\end{equation}
+where $\langle\de z,\dot\gamma\rangle$ is the duality pairing.  Our weight function will be given in terms of polar coordinates $(r,\theta)$.  Recall
+    $$\partial_z=\frac{e^{-i\theta}}{2r}(r\partial_r-i\partial_\theta)$$
+% and
+%     $$\de z = \de(re^{i\theta})=e^{i\theta}\de r + ire^{i\theta}\de\theta$$
+so \eqref{eqn: geodesic equation} becomes
+\begin{equation}\label{eqn: polar geodesic equation}
+    0=\nabla_{\dot\gamma}\dot\gamma=\ddot\gamma+\frac{e^{-i\theta}}{2}(\partial_r\log u-ir\partial_\theta\log u)\dot\gamma^2.
+\end{equation}
+We still consider $\dot\gamma$ and $\ddot\gamma$ to be complex numbers.
+
+
+\section*{Approximating Geodesics on a Cone}
+Let $p$ and $v$ be the initial position and velocity for the geodesic, both given as complex numbers.  Denoting $\nabla_z = \frac{e^{-i\theta}}{2}(\partial_r\log u-ir\partial_\theta\log u)$, we will apply Euler's method to
+\begin{equation}\label{eqn: update rule}
+    \partial_t\dot\gamma=-\nabla_z\dot\gamma^2.
+\end{equation}
+The only difference from our geodesics on the cone is that now we must approximate $\nabla_z$ using the finite element data we simulated.  To do this, we need to:
+\begin{itemize}
+    \item Find the point nearest to $\gamma(t)$, given in polar coordinates;
+    \item Use first differences to approximate $\nabla_z$;
+    \item Update $\dot\gamma$ according to \eqref{eqn: update rule};
+    \item Update $\gamma$ by adding $(\Delta t)\ddot\gamma$.
+\end{itemize}
+
+
+\end{document}
