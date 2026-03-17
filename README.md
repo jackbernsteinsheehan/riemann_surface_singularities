@@ -29,7 +29,7 @@ In the `polar/2D` directory, we have the `curvature_flow.py`, `curvature_flow_on
 ![alt text](img/polar_early_t.png)
 ![alt text](img/polar_late_t.png)
 
-`curvature_flow_on_sphere.py` is a simulation of Yamabe flow on a sphere. This is a work in progress, and is not yet fully implemented.
+`curvature_flow_on_sphere.py` is a simulation of Yamabe flow on a sphere. This is a work in progress, and is not yet fully implemented. Here is an example of the glueing from south and north pole: ![alt text](image.png)
 
 ### symmetric:
 In the `polar/symmetric` folder are our first simulations in polar coordinates, which use radially symmetric initial conditions, allowing us to omit the angular derivative component of the laplacian. Here's an example of the one simulating curvature over a disk: ![alt text](img/cone.png)
