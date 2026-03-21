@@ -42,7 +42,13 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
     u_south[:, :] = 1
     u_north[:, :] = 1
 
-    # set frames for displaying (parallel lists)
+    # Perturb initial condition (comment out these lines to start with flat disks glued along boundary)
+    u_south[0:5,:] = .5
+    u_south[10:,:] = 2
+    u_north[0:5,:] = .5
+    u_north[10:,:] = 2
+
+    # Set frames for displaying (parallel lists)
     save_every = 20
 
     # Calculate laplacian
@@ -151,19 +157,22 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     fig = matplotlib.pyplot.figure(figsize=(12, 10))
     fig.subplots_adjust(bottom=0.18)
 
-    # Setup subplots and limits
-    south_ax = fig.add_subplot(2, 2, 1, projection="3d")
+    # Setup 3D subplots for the individual weight functions
+    south_ax = fig.add_subplot(2, 2, 3, projection="3d")
     south_zmin = float(min(f.min() for f in south_frames))
     south_zmax = float(max(f.max() for f in south_frames))
     south_ax.set(zlim=(south_zmin, south_zmax), xlabel="x", ylabel="y", zlabel="u_south")
 
-    north_ax = fig.add_subplot(2, 2, 3, projection="3d")
+    north_ax = fig.add_subplot(2, 2, 1, projection="3d")
     north_zmin = float(min(f.min() for f in north_frames))
     north_zmax = float(max(f.max() for f in north_frames))
     north_ax.set(zlim=(north_zmin, north_zmax), xlabel="x", ylabel="y", zlabel="u_north")
 
+    # Setup a taller subplot spanning the right side for the full isometric embedding
     iso_ax = fig.add_subplot(2, 2, (2, 4), projection="3d")
 
+    # Calculate global minimum and maximum curvature values across all frames 
+    # to ensure the color scale remains consistent throughout the animation.
     all_k = [k for k_frames in (k_south_frames, k_north_frames) for k in k_frames]
     k_min = float(min(k.min() for k in all_k))
     k_max = float(max(k.max() for k in all_k))
@@ -172,6 +181,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     k_margin = max_dev * 0.1 if max_dev > 0 else 0.1
     norm = matplotlib.colors.Normalize(vmin=k_min - k_margin, vmax=rho_t / 4 + max_dev + k_margin)
     
+    # Determine the bounding box for the isometric plot across all frames
     all_iso_h = []
     all_iso_c = []
     for (cs, hs), (cn, hn) in zip(iso_south_frames, iso_north_frames):
@@ -180,6 +190,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         if not np.isnan(cs).all():
             all_iso_c.append(np.nanmax(cs))
             
+        # Account for the shifted height of the north hemisphere
         hn_shifted = hs[-1, 0] + hn[-1, 0] - hn
         if not np.isnan(hn_shifted).all():
             all_iso_h.extend([np.nanmin(hn_shifted), np.nanmax(hn_shifted)])
@@ -192,13 +203,14 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     iso_ax.set(zlim=(iso_hmin, iso_hmax), xlim=(-iso_cmax, iso_cmax), ylim=(-iso_cmax, iso_cmax),
                xlabel="x", ylabel="y", zlabel="height")
 
-    # Add a colorbar to the right of the isometric plot
+    # Add a global colorbar corresponding to the curvature values in the isometric plot
     sm = matplotlib.cm.ScalarMappable(cmap='jet', norm=norm)
     sm.set_array([])
     cax = fig.add_axes((0.88, 0.15, 0.02, 0.3))
     fig.colorbar(sm, cax=cax, label="Curvature")
 
-    # Store surface objects so we can remove them before drawing the next frame
+    # We store the 3D surface objects in a dictionary so we can efficiently 
+    # clear the old ones before rendering the next frame.
     surfaces = {}
 
     def draw_frame(frame_idx):
@@ -209,12 +221,12 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
         time_str = f"t = {times[frame_idx]:.4f} s (frame={frame_idx})"
 
-        # Draw South
+        # Draw southern hemisphere weight function
         Z_south = south_frames[frame_idx]
         surfaces["south"] = south_ax.plot_surface(X, Y, Z_south, cmap="jet", vmin=south_zmin, vmax=south_zmax, shade=True)
         south_ax.set_title(f"Southern Hemisphere Weight Function\n{time_str}")
 
-        # Draw North
+        # Draw northern hemisphere weight function
         Z_north = north_frames[frame_idx]
         surfaces["north"] = north_ax.plot_surface(X, Y, Z_north, cmap="jet", vmin=north_zmin, vmax=north_zmax, shade=True)
         north_ax.set_title(f"Northern Hemisphere Weight Function\n{time_str}")
@@ -225,6 +237,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         Y_iso_s = c_vals_s * np.sin(TH)
         Z_iso_s = h_vals_s
         K_s = k_south_frames[frame_idx]
+        # Average curvature to apply face colors per grid square rather than per vertex
         K_face_s = (K_s[:-1, :-1] + K_s[1:, :-1] + K_s[:-1, 1:] + K_s[1:, 1:]) / 4
         colors_s = matplotlib.colormaps['jet'](norm(K_face_s))
         surfaces["iso_south"] = iso_ax.plot_surface(X_iso_s, Y_iso_s, Z_iso_s, facecolors=colors_s, shade=True, edgecolor='k', linewidth=0.1)
@@ -233,6 +246,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         c_vals_n, h_vals_n = iso_north_frames[frame_idx]
         X_iso_n = c_vals_n * np.cos(TH)
         Y_iso_n = c_vals_n * np.sin(TH)
+        # Calculate Z height so that the equator connects seamlessly and the north pole is inverted
         Z_iso_n = h_vals_s[-1, 0] + h_vals_n[-1, 0] - h_vals_n
         K_n = k_north_frames[frame_idx]
         K_face_n = (K_n[:-1, :-1] + K_n[1:, :-1] + K_n[:-1, 1:] + K_n[1:, 1:]) / 4
@@ -241,10 +255,10 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         
         iso_ax.set_title(f"Isometric Embedding at {time_str}")
 
-    # Draw the initial frame
+    # Initialize the plot with the first frame
     draw_frame(0)
 
-    # Setup the slider
+    # Setup the interactive slider for scrubbing through time
     slider_ax = fig.add_axes((0.15, 0.06, 0.7, 0.04))
     time_slider = matplotlib.widgets.Slider(slider_ax, "frame", 0, num_frames - 1, valinit=0, valstep=1)
 
