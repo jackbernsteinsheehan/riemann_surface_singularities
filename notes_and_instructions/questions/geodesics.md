@@ -1,0 +1,3 @@
+p is a complex number representing a point. When calculating the nearest point to p that we have data for, how do we represent this? Can we translate the r, theta coordinates to x, y and then treat this as x + iy?
+
+I'm using the `frames` object from the `sim_in_polar` function from `curvature_flow.py` as representative of the weight function for simulating geodesics. Do we want to go more fine-grained than this? Additionally, is the Nr=30 and Ntheta=20 that we've been using go to be specific enough to calculate trajectories?

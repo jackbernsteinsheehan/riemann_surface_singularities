@@ -8,7 +8,7 @@ from tqdm import tqdm
 BETA = 0
 RHO = 0
 
-def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20):
+def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20, plot = True):
 
     # Get radii in [0,1]
     r = np.linspace(0.0, 1.0, Nr)
@@ -108,8 +108,10 @@ def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20):
     Y = R * np.sin(phi)
 
     # Plot the sim
-    plot_frames_with_slider(frames, frame_times, X, Y)
-    return (frames, frame_times)
+    if plot:
+        plot_frames_with_slider(frames, frame_times, X, Y)
+
+    return (frames, frame_times, r, theta)
 
 #Cycles a list
 def cycle_left(list:np.ndarray):

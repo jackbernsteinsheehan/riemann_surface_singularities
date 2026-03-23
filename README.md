@@ -39,5 +39,5 @@ In the `geodesics` directory, you can see some attempts at modeling the trajecto
 
 
 ## Log
-Updated runtime around 4x speed increase with Arya's slice method replacing the nested loops. Added angular derivative to conformal cone, used a +2 to avoid log(0) errors.
-Renamed `conformal_cone` to `curvature_flow`
+Working on geodesics. Need to use r, theta to apply the index of the frames object to infer the actual radii and anglular values
+
