@@ -12,14 +12,44 @@ def calculate_geodesic(p, v):
 
     # Infer the dt that we used in the simulation
     dt = frame_times[1] - frame_times[0]
+    closest_point = get_closest_point(p, frames, r, theta)
+    weight = 
 
 
-def get_closest_point(p, frames:list, r, theta):
-    """p is complex number, frames is a list representing the weight function at different
-    times, radial indices, and theta indices."""
+def get_closest_point(p, r, theta) -> tuple:
+    """p is complex number, r is all radii, theta is all angles.
+    returns a tuple (radius index, angular index)"""
 
-    
+    r_gamma = abs(p)
+    theta_gamma = np.angle(p)
 
+    i = np.argmin(np.abs(r - r_gamma))
+    j = np.argmin(np.abs((theta - theta_gamma + np.pi) % (2*np.pi) - np.pi))
+    return i, j 
+
+
+def sim_geodesic(p, v):
+    # Initial geodesic
+    gamma = p
+    gamma_dot = v
+    gamma_ddot = 0
+
+    # Get weight function data
+    frames, frame_times, r, theta = sim_in_polar(plot=False)
+
+    # Infer the dt that we used in the simulation
+    dt = frame_times[1] - frame_times[0]
+
+    # Step through the simulation
+    for t in range(len(frames)):
+        closest_point = get_closest_point(p, r, theta)
+        weight = frames[t][closest_point]
+
+        # Geodesic equation
+        log = np.log(weight)
+        
+
+        
 
 
 

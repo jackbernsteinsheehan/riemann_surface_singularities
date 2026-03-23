@@ -41,3 +41,6 @@ In the `geodesics` directory, you can see some attempts at modeling the trajecto
 ## Log
 Working on geodesics. Need to use r, theta to apply the index of the frames object to infer the actual radii and anglular values
 
+## TODO
+Refactor codebase so that modules are in the correct folders, it doesn't really make sense right now. We need to move curvature things out of heat_sims and maybe consolidate all geodesics work.
+
