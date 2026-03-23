@@ -109,6 +109,7 @@ def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20):
 
     # Plot the sim
     plot_frames_with_slider(frames, frame_times, X, Y)
+    return (frames, frame_times)
 
 #Cycles a list
 def cycle_left(list:np.ndarray):
