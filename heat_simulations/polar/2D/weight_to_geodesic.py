@@ -47,9 +47,8 @@ def sim_geodesic(p, v):
 
         # Geodesic equation
         log = np.log(weight)
-        
 
-        
+    
 
 
 
