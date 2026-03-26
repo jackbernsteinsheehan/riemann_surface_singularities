@@ -38,6 +38,7 @@ def sim_geodesic(p, v):
     frames, frame_times, r, theta = sim_in_polar(plot=False)
 
     # Infer the dt that we used in the simulation
+    # Not sure if this will be the correct dt or not
     dt = frame_times[1] - frame_times[0]
 
     # Step through the simulation
@@ -45,8 +46,13 @@ def sim_geodesic(p, v):
         closest_point = get_closest_point(p, r, theta)
         weight = frames[t][closest_point]
 
+        dr = r[1] - r[0]
+        dtheta = theta[1] - theta[0]
+
         # Geodesic equation
-        log = np.log(weight)
+        log_u = np.log(weight)
+        term_2 = (dr * log_u) - (dtheta * log_u) # Need to get r and i somehow
+        term_1 = (np.e**)
 
     
 
