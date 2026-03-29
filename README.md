@@ -15,10 +15,11 @@ pip3 install matplotlib
 to install the necessary stack.
 
 ## Editing Simulation Parameters
-The paramters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file. To plot a geodesic along a trajectory with surface defined by a weight funtion, edit the params in the config file and run 
+The paramters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file. To plot a geodesic along a trajectory with surface defined by a weight funtion, edit the params in the config file to your desired conditions, as well as `CURVE_PLOT = "single"` and `GEO_PLOT = True`, and run 
 ```powershell
 python3 weight_to_geodesic.py
 ```
+After closing the first window, you should see the geodesic plotted on the surface.
 
 ## `heat_simulations`
 ### `heat_simulations/first_passes`
