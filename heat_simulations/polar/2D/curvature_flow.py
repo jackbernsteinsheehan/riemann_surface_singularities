@@ -65,31 +65,6 @@ def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20, plot = True):
 
         u_next[1:-1] = w[1:-1] + dt * a* (RHO * w[1:-1] + laplacian(np.log(w),r,dr,theta,dtheta))
 
-        #OLD VERSION
-        # Update excludes r = 0
-        # for i in range(1, Nr - 1):
-        #     radius = r[i]
-        #     for j in range(Ntheta):
-            
-        #         # Wrap around when we get to the beginning or end.
-        #         # The neighbor should be the opposite index
-
-        #         jp = (j + 1) % Ntheta
-        #         jm = (j - 1) % Ntheta
-
-        #         #Second derivative of r
-        #         u_rr = (w[i+1, j] - 2*w[i, j] + w[i-1, j]) / dr ** 2
-
-        #         # First derivative of r
-        #         u_r = (w[i+1, j] - w[i-1, j]) / (2 * dr)
-
-        #         # Second derivative of theta
-        #         u_theta_theta = (w[i, jp] - 2*w[i, j] + w[i, jm])/ dtheta**2
-
-        #         # Apply to next slice
-        #         u_next[i, j] = w[i, j] + dt * a * (u_rr + (1/radius * u_r) + 1/(radius**2)*(u_theta_theta))
-
-        # Update in place instead of calling the function...might be faster
         u_next[-1, :] = np.cos(2 * theta) + 2
         
 
@@ -132,11 +107,6 @@ def laplacian(f,r,dr,theta,dtheta):
 
     return f_rr + f_r / r[1:-1, np.newaxis] + f_theta_theta[1:-1] / (r[1:-1, np.newaxis] ** 2)
 
-    # First derivative of r
-    u_r = (w[i+1, j] - w[i-1, j]) / (2 * dr)
-
-    # Second derivative of theta
-    u_theta_theta = (w[i, jp] - 2*w[i, j] + w[i, jm])/ dtheta**2
 
 def set_boundary(w:np.ndarray, theta):
     '''returns a copy of w with boundary conditions enforced. W should be a 2d array representing
