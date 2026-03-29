@@ -53,7 +53,7 @@ def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20, plot = True):
     # set frames for displaying (parallel lists)
     frames = []
     frame_times = []
-    save_every = 200
+    save_every = config.SAVE_EVERY
     u_next = np.zeros_like(u)+2
 
     # The model: updates for each time step t
@@ -114,6 +114,37 @@ def set_boundary(w:np.ndarray, theta):
     l = w.copy()
     l[-1, :] = 2 + np.cos(10 * theta)
     return l
+
+
+def plot_single_frame(frames, frame_times, X, Y):
+    if len(frames) == 0:
+        raise ValueError("frames is empty")
+
+    if frame_times is None or len(frame_times) != len(frames):
+        frame_times = [float(k) for k in range(len(frames))]
+
+    n_frames = len(frames)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    fig.subplots_adjust(bottom=0.18)
+
+    zmin = float(min(f.min() for f in frames))
+    zmax = float(max(f.max() for f in frames))
+    ax.set_zlim(zmin, zmax)
+
+    # ---- initial frame ----
+    k0 = 0
+    Z0 = frames[k0].copy()
+    Z0[0, 1:] = np.nan          # mask center fan triangles (optional but recommended)
+    surf = ax.plot_surface(X, Y, Z0, cmap="jet", vmin=zmin, vmax=zmax, shade=True)
+
+    ax.set_title(f"t = {frame_times[k0]:.4f} s (frame={k0})")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("Temp")
+
+    plt.show()
 
 
 def plot_frames_with_slider(frames, frame_times, X, Y):

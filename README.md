@@ -15,7 +15,10 @@ pip3 install matplotlib
 to install the necessary stack.
 
 ## Editing Simulation Parameters
-The paramters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file.
+The paramters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file. To plot a geodesic along a trajectory with surface defined by a weight funtion, edit the params in the config file and run 
+```powershell
+python3 weight_to_geodesic.py
+```
 
 ## `heat_simulations`
 ### `heat_simulations/first_passes`
@@ -47,5 +50,19 @@ In `weight_to_geodesic.py`, I'm working on calculating a geodesic for a specific
 Working on geodesics. Need to use r, theta to apply the index of the frames object to infer the actual radii and anglular values
 
 ## TODO
-Refactor codebase so that modules are in the correct folders, it doesn't really make sense right now. We need to move curvature things out of heat_sims and maybe consolidate all geodesics work.
+0. Refactor codebase so that modules are in the correct folders, it doesn't really make sense right now. We need to move curvature things out of heat_sims and maybe consolidate all geodesics work.
+
+1. Plot the geodesic over the curvature_flow plot
+   - z = u would plot it in 3d along the surface
+   - need to implement a function to plot only a single frame (config.U_IDX), with no slider
+
+2. Integrate the geodesic into the slider
+   - Plot the geodesic on every frame and save the path
+   - plot all frames with a slider
+
+3. Apply these methods to the sphere
+
+4. Mess with singularities and effects on geodesics and average curvature
+
+4. Evententually remove the slider and animate it for presentation
 

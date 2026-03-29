@@ -102,4 +102,4 @@ def get_closest_point(p, r, theta) -> tuple:
 
 if __name__ == "__main__":
 
-    plot_geodesic(config.P, config.V, config.U_IDX, config.STEPS, config.GEO_PLOT)
+    plot_geodesic(config.P, config.V, config.U_IDX, config.STEPS, config.CURVE_PLOT, config.GEO_PLOT)
