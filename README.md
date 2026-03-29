@@ -14,6 +14,9 @@ pip3 install matplotlib
 ```
 to install the necessary stack.
 
+## Editing Simulation Parameters
+The paramters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file.
+
 ## `heat_simulations`
 ### `heat_simulations/first_passes`
 In `first_passes`, you'll find the first simulations we created, like the initial 1D and 2D models, as well as experiments with more interesting boundary conditions. With `bounds_time_stack` we made our first attempt at storing all values and plotting all at once.

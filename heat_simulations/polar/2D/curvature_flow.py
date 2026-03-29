@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from tqdm import tqdm
+import config
 
 
-
-BETA = 0
-RHO = 0
+BETA = config.BETA
+RHO = config.RHO
 
 def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20, plot = True):
 
@@ -163,4 +163,4 @@ def plot_frames_with_slider(frames, frame_times, X, Y):
     plt.show()
 
 if __name__ == "__main__":
-    sim_in_polar()
+    sim_in_polar(config.A, config.T, config.Nr, config.Ntheta, config.CURVE_PLOT)
