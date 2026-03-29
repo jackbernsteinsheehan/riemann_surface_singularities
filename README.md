@@ -38,7 +38,7 @@ In the `polar/symmetric` folder are our first simulations in polar coordinates, 
 In the `geodesics` directory, you can see some attempts at modeling the trajectory of a geodesic near a cone structure. The animations are rudimentary (very ugly!).
 
 ## Calculating Geodesics
-In `weight_to_geodesic.py`, I'm working on calculating a geodesic for a specific weight function. Codex wants to do weird indexing things, I wonder if the cycling would work better.
+In `weight_to_geodesic.py`, I'm working on calculating a geodesic for a specific weight function. It works pretty well I think, not sure if the plot makes sense though. Seems like it just goes in a straight line.
 
 ## Log
 Working on geodesics. Need to use r, theta to apply the index of the frames object to infer the actual radii and anglular values
