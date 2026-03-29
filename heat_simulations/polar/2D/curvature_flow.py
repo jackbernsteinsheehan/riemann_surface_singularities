@@ -83,8 +83,10 @@ def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20, plot = True):
     Y = R * np.sin(phi)
 
     # Plot the sim
-    if plot:
+    if plot == True:
         plot_frames_with_slider(frames, frame_times, X, Y)
+    elif config.CURVE_PLOT == "single":
+        plot_single_frame(frames, frame_times, X, Y, config.U_IDX)
 
     return (frames, frame_times, r, theta)
 
@@ -116,14 +118,15 @@ def set_boundary(w:np.ndarray, theta):
     return l
 
 
-def plot_single_frame(frames, frame_times, X, Y):
+def plot_single_frame(frames, frame_times, X, Y, frame_idx=0):
     if len(frames) == 0:
         raise ValueError("frames is empty")
 
     if frame_times is None or len(frame_times) != len(frames):
         frame_times = [float(k) for k in range(len(frames))]
 
-    n_frames = len(frames)
+    if frame_idx < 0 or frame_idx >= len(frames):
+        raise IndexError(f"frame_idx {frame_idx} is out of range for {len(frames)} saved frames")
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -133,13 +136,11 @@ def plot_single_frame(frames, frame_times, X, Y):
     zmax = float(max(f.max() for f in frames))
     ax.set_zlim(zmin, zmax)
 
-    # ---- initial frame ----
-    k0 = 0
-    Z0 = frames[k0].copy()
-    Z0[0, 1:] = np.nan          # mask center fan triangles (optional but recommended)
-    surf = ax.plot_surface(X, Y, Z0, cmap="jet", vmin=zmin, vmax=zmax, shade=True)
+    Z = frames[frame_idx].copy()
+    Z[0, 1:] = np.nan
+    ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True)
 
-    ax.set_title(f"t = {frame_times[k0]:.4f} s (frame={k0})")
+    ax.set_title(f"t = {frame_times[frame_idx]:.4f} s (frame={frame_idx})")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("Temp")
