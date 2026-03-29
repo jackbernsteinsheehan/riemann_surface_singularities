@@ -8,10 +8,13 @@ given by the model in that file"""
 
 
 def plot_geodesic(p, v, u_idx, steps, curve_plot=False, geo_plot=True):
-
-    path = geodesic(p, v, u_idx, steps, plot=curve_plot)
-
+    
+    path, u, frame_time, r, theta = geodesic(p, v, u_idx, steps, plot=False)
     path = np.asarray(path, dtype=complex)
+
+    if curve_plot == "single":
+        plot_geodesic_on_frame(path, u, frame_time, r, theta, u_idx)
+
     if geo_plot:
         fig, ax = plt.subplots()
 
@@ -30,7 +33,7 @@ def plot_geodesic(p, v, u_idx, steps, curve_plot=False, geo_plot=True):
         ax.legend()
         plt.show()
 
-def geodesic(p, v, u_idx, steps, plot=False) -> list:
+def geodesic(p, v, u_idx, steps, plot=False):
     """p is initial geodesic position, v is the initial velocity, both complex numbers.
     u_idx is the specific weight function at some time index"""
 
@@ -54,8 +57,6 @@ def geodesic(p, v, u_idx, steps, plot=False) -> list:
     # Resulting path of the geodesic
     path = [gamma]
 
-    print(f"number of frames: {len(u)}")
-
     # Cycling for neighbors
     log_u_left = np.apply_along_axis(cycle_left, 1, log_u)
     log_u_right = np.apply_along_axis(cycle_right, 1, log_u)
@@ -69,16 +70,16 @@ def geodesic(p, v, u_idx, steps, plot=False) -> list:
 
     # Step through the simulation
     for i in range(steps):
-        i, j = get_closest_point(gamma, r, theta)
-        if i <= 0 or i >= len(r) - 1:
+        ri, tj = get_closest_point(gamma, r, theta)
+        if ri <= 0 or ri >= len(r) - 1:
             break
         
-        r_val = r[i]
-        theta_val = theta[j]
+        r_val = r[ri]
+        theta_val = theta[tj]
 
         # Get derivatives WRT theta and radius
-        partial_theta = dlogu_dtheta[i, j]
-        partial_r = dlogu_dr[i, j]
+        partial_theta = dlogu_dtheta[ri, tj]
+        partial_r = dlogu_dr[ri, tj]
 
         dz = (np.exp(-1j  * theta_val) / 2) * (partial_r - (1j * r_val*partial_theta))
         gamma_ddot = -dz * (gamma_dot ** 2)
@@ -86,7 +87,40 @@ def geodesic(p, v, u_idx, steps, plot=False) -> list:
         gamma += dt * gamma_dot
         path.append(gamma)
         #print(abs(dz), abs(gamma_ddot))
-    return path
+    return path, u, frame_times[u_idx], r, theta
+
+def plot_geodesic_on_frame(path, u, frame_time, r, theta, u_idx):
+    path_points = np.asarray(path, dtype=complex)
+    if len(path_points) == 0:
+        raise ValueError("path is empty")
+
+    R, TH = np.meshgrid(r, theta, indexing="ij")
+    phi = (1 - BETA) * TH
+    X = R * np.cos(phi)
+    Y = R * np.sin(phi)
+
+    z_path = []
+    for gamma in path_points:
+        ri, tj = get_closest_point(gamma, r, theta)
+        z_path.append(u[ri, tj])
+    z_path = np.asarray(z_path, dtype=float)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+
+    Z = u.copy()
+    Z[0, 1:] = np.nan
+    ax.plot_surface(X, Y, Z, cmap="jet", vmin=float(np.nanmin(u)), vmax=float(np.nanmax(u)), shade=True, alpha=0.85)
+    ax.plot(path_points.real, path_points.imag, z_path, color="black", linewidth=2.5, label="geodesic")
+    ax.scatter([path_points[0].real], [path_points[0].imag], [z_path[0]], color="tab:green", s=40, label="start")
+    ax.scatter([path_points[-1].real], [path_points[-1].imag], [z_path[-1]], color="tab:red", s=40, label="end")
+
+    ax.set_title(f"Geodesic on frame {u_idx} at t = {frame_time:.4f} s")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("u")
+    ax.legend()
+    plt.show()
 
 def get_closest_point(p, r, theta) -> tuple: 
     """p is complex number, r is all radii, theta is all angles.
