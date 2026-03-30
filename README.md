@@ -15,13 +15,44 @@ pip3 install matplotlib
 to install the necessary stack.
 
 ## Editing Simulation Parameters
-The paramters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file. To plot a geodesic along a trajectory with surface defined by a weight funtion, edit the params in the config file to your desired conditions, as well as `CURVE_PLOT = "single"` and `GEO_PLOT = True`, and run 
-```powershell
-python3 weight_to_geodesic.py
-```
-After closing the first window, you should see the geodesic plotted on the surface.
+The parameters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file. The function calls at the bottom of each file load the variables from config.
 
-## `heat_simulations`
+
+## Calculating Geodesics
+In `weight_to_geodesic.py`, in the heat_simulations directory, we calculate a geodesic based on data from `curvature_flow.py`. It basically pulls a single frame or curvature state from simulations that we previously worked on in `curvature_flow.py` and calculates a geodesic trajectory across that surface.
+
+To calulate a geodesic and plot a geodesic, edit the variables in `heat_simulations/polar/2D/config.py` to whatever you want and then run 
+```powershell
+python3 heat_simulations/polar/2D/weight_to_geodesic.py
+```
+from the root directory (or just run the python file). After closing the first pop-up window, you should see the trajectory overlayed on the curvature plot.
+
+This config file was used to generate the below image:
+```python
+# --- Curvature flow params --- #
+A = 1
+T = 1
+Nr = 50
+Ntheta = 50
+
+# can be True, False, "single"
+CURVE_PLOT = "single" # Show curvature flow plot, or show a single frame with "single"
+SAVE_EVERY = 200 # How often we save the state to a new frame
+BETA = 0
+RHO = 0
+
+# --- Geodesic params --- #
+P = 0.75 + 0.0j
+V = -0.5 + 0.35j
+U_IDX = 50 # determines which weight function from the frames object will be used
+STEPS = 5000
+GEO_PLOT = True # Show geodesic path
+```
+This configuration produced this image:
+![alt text](img/image-1.png)
+
+
+## heat_simulations
 ### `heat_simulations/first_passes`
 In `first_passes`, you'll find the first simulations we created, like the initial 1D and 2D models, as well as experiments with more interesting boundary conditions. With `bounds_time_stack` we made our first attempt at storing all values and plotting all at once.
 
@@ -41,14 +72,9 @@ In the `polar/2D` directory, we have the `curvature_flow.py`, `curvature_flow_on
 ### symmetric:
 In the `polar/symmetric` folder are our first simulations in polar coordinates, which use radially symmetric initial conditions, allowing us to omit the angular derivative component of the laplacian. Here's an example of the one simulating curvature over a disk: ![alt text](img/cone.png)
 
-## `geodesics`
-In the `geodesics` directory, you can see some attempts at modeling the trajectory of a geodesic near a cone structure. The animations are rudimentary (very ugly!).
-
-## Calculating Geodesics
-In `weight_to_geodesic.py`, I'm working on calculating a geodesic for a specific weight function. It works pretty well I think, not sure if the plot makes sense though. Seems like it just goes in a straight line.
 
 ## Log
-Working on geodesics. Need to use r, theta to apply the index of the frames object to infer the actual radii and anglular values
+Implemented geodesics. Through task #1 in TODO.
 
 ## TODO
 0. Refactor codebase so that modules are in the correct folders, it doesn't really make sense right now. We need to move curvature things out of heat_sims and maybe consolidate all geodesics work.
