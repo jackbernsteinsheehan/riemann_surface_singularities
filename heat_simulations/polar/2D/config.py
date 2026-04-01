@@ -1,8 +1,8 @@
 # --- Curvature flow params --- #
 A = 1
 T = 1
-Nr = 50
-Ntheta = 50
+Nr = 25
+Ntheta = 25
 
 # can be True, False, "single"
 CURVE_PLOT = "single" # Show curvature flow plot, or show a single frame with "single"

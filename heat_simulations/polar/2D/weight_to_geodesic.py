@@ -59,8 +59,8 @@ def geodesic(p, v, u_idx, steps, plot=False):
     path = [gamma]
 
     # Cycling for neighbors
-    log_u_left = np.apply_along_axis(cycle_left, 1, log_u)
-    log_u_right = np.apply_along_axis(cycle_right, 1, log_u)
+    log_u_left = np.roll(log_u, -1, axis=1)
+    log_u_right = np.roll(log_u, 1, axis=1)
 
     # Calculate angular derivatives at all points
     dlogu_dtheta = (log_u_left - log_u_right) / (2 * dtheta)
