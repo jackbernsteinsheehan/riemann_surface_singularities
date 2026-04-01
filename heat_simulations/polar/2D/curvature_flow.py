@@ -8,7 +8,7 @@ import config
 BETA = config.BETA
 RHO = config.RHO
 
-def sim_in_polar(a=1.0, t=1, Nr=30, Ntheta=20, plot = True):
+def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plot = config.CURVE_PLOT):
 
     # Get radii in [0,1]
     r = np.linspace(0.0, 1.0, Nr)

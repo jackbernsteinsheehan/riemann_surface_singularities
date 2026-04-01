@@ -74,7 +74,7 @@ In the `polar/symmetric` folder are our first simulations in polar coordinates, 
 
 
 ## Log
-Implemented geodesics. Through task #1 in TODO.
+Implemented geodesics. Through task #1 in TODO. Maybe we should store simulation data in a database so we don't need to run it every time.
 
 ## TODO
 0. Refactor codebase so that modules are in the correct folders, it doesn't really make sense right now. We need to move curvature things out of heat_sims and maybe consolidate all geodesics work.
@@ -83,13 +83,10 @@ Implemented geodesics. Through task #1 in TODO.
    - z = u would plot it in 3d along the surface
    - need to implement a function to plot only a single frame (config.U_IDX), with no slider
 
-2. Integrate the geodesic into the slider
-   - Plot the geodesic on every frame and save the path
-   - plot all frames with a slider
+2. From sim_in_polar(), call geodesic() at every frame
 
 3. Apply these methods to the sphere
 
 4. Mess with singularities and effects on geodesics and average curvature
 
 4. Evententually remove the slider and animate it for presentation
-
