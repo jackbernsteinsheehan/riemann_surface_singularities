@@ -1,5 +1,6 @@
 from curvature_flow import *
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 import matplotlib.pyplot as plt
 import config
 """
@@ -93,6 +94,11 @@ def plot_geodesic_on_frame(path, u, frame_time, r, theta, u_idx):
     path_points = np.asarray(path, dtype=complex)
     if len(path_points) == 0:
         raise ValueError("path is empty")
+    
+    # Create a linear interpolation function for u
+    # RegularGridInterpolator expects the axes (r, theta) and the values u
+    interp_u = RegularGridInterpolator((r, theta), u, method='cubic', bounds_error=False, fill_value=None)
+
 
     R, TH = np.meshgrid(r, theta, indexing="ij")
     phi = (1 - BETA) * TH
@@ -101,8 +107,9 @@ def plot_geodesic_on_frame(path, u, frame_time, r, theta, u_idx):
 
     z_path = []
     for gamma in path_points:
-        ri, tj = get_closest_point(gamma, r, theta)
-        z_path.append(u[ri, tj])
+        # ri, tj = get_closest_point(gamma, r, theta)
+        # z_path.append(u[ri, tj])
+        z_path.append(interp_u([np.abs(gamma), np.angle(gamma)])[0])
     z_path = np.asarray(z_path, dtype=float)
 
     fig = plt.figure()
