@@ -15,4 +15,4 @@ P = 0.75 + 0.0j
 V = -0.5 + 0.35j
 U_IDX = 50 # determines which weight function from the frames object will be used
 STEPS = 5000
-GEO_PLOT = True # Show geodesic path
+GEO_PLOT = True # Show geodesic path on a 2D circle
