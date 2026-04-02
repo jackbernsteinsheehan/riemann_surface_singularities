@@ -84,7 +84,9 @@ Implemented geodesics. Through task #1 in TODO. Maybe we should store simulation
    - need to implement a function to plot only a single frame (config.U_IDX), with no slider
 
 2. From sim_in_polar(), call geodesic() at every frame
+   - change geodesic() first few lines
 
+2_5. side-by side where we can increase the curvature (bump in middle) and watch the geodesic change on a diff window
 3. Apply these methods to the sphere
 
 4. Mess with singularities and effects on geodesics and average curvature
