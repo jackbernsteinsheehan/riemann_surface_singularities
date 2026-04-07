@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
 import config
-
+import geodesic_calc as geo
 
 BETA = config.BETA
 RHO = config.RHO
@@ -57,13 +58,12 @@ def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plo
     u_next = np.zeros_like(u)+2
 
     # The model: updates for each time step t
-    # w = u
-    # w = np.log(w)
+
     for n in tqdm(range(t_nodes - 1)):
         w = u_next
         u_next[:, :] = w[:, :]
 
-        u_next[1:-1] = w[1:-1] + dt * a* (RHO * w[1:-1] + laplacian(np.log(w),r,dr,theta,dtheta))
+        u_next[1:-1] = w[1:-1] + dt * a * (RHO * w[1:-1] + laplacian(np.log(w),r,dr,theta,dtheta))
 
         u_next[-1, :] = np.cos(2 * theta) + 2
         
@@ -84,11 +84,19 @@ def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plo
 
     # Plot the sim
     if plot == True:
-        plot_frames_with_slider(frames, frame_times, X, Y)
+        if config.GEO_PLOT:
+            plot_geo_with_slider(frames, frame_times, r, theta)
+        else:
+            plot_frames_with_slider(frames, frame_times, X, Y)
     elif config.CURVE_PLOT == "single":
         plot_single_frame(frames, frame_times, X, Y, config.U_IDX)
+    if config.GEO_PLOT == True and plot != True:
+        path = geo.geodesic(u, r, theta, config.STEPS)
+        time = dt*n
+        #geo.plot_geodesic_on_frame(path, u, time, r, theta, config.U_IDX)
+        plot_geo_with_slider(frames, frame_times, r, theta)
 
-    return (frames, frame_times, r, theta)
+    return (frames, frame_times, r, theta, config.STEPS)
 
 #Cycles a list
 def cycle_left(list:np.ndarray):
@@ -189,6 +197,94 @@ def plot_frames_with_slider(frames, frame_times, X, Y):
         surf.remove()
         surf = ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True)
         ax.set_title(f"t = {frame_times[k]:.4f} s (frame={k})")
+        fig.canvas.draw_idle()
+
+    s.on_changed(update)
+    plt.show()
+
+
+def plot_geo_with_slider(frames, frame_times, r, theta):
+    if len(frames) == 0:
+        raise ValueError("frames is empty")
+
+    if frame_times is None or len(frame_times) != len(frames):
+        frame_times = [float(k) for k in range(len(frames))]
+
+    R, TH = np.meshgrid(r, theta, indexing="ij")
+    phi = (1 - BETA) * TH
+    X = R * np.cos(phi)
+    Y = R * np.sin(phi)
+
+    zmin = float(min(np.nanmin(frame) for frame in frames))
+    zmax = float(max(np.nanmax(frame) for frame in frames))
+    paths = []
+    z_paths = []
+
+    for frame in frames:
+        path = np.asarray(geo.geodesic(frame, r, theta, config.STEPS), dtype=complex)
+        interp_u = RegularGridInterpolator(
+            (r, theta),
+            frame,
+            method="cubic",
+            bounds_error=False,
+            fill_value=None,
+        )
+        z_path = np.asarray(
+            [interp_u([np.abs(gamma), np.angle(gamma)])[0] for gamma in path],
+            dtype=float,
+        )
+        paths.append(path)
+        z_paths.append(z_path)
+
+        if len(z_path) > 0:
+            zmin = min(zmin, float(np.nanmin(z_path)))
+            zmax = max(zmax, float(np.nanmax(z_path)))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    fig.subplots_adjust(bottom=0.18)
+    ax.set_zlim(zmin, zmax)
+
+    k0 = 0
+    Z0 = frames[k0].copy()
+    Z0[0, 1:] = np.nan
+    surf = ax.plot_surface(X, Y, Z0, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
+
+    path0 = paths[k0]
+    z_path0 = z_paths[k0]
+    line, = ax.plot(path0.real, path0.imag, z_path0, color="black", linewidth=2.5, label="geodesic")
+    start = ax.scatter([path0[0].real], [path0[0].imag], [z_path0[0]], color="tab:green", s=40, label="start")
+    end = ax.scatter([path0[-1].real], [path0[-1].imag], [z_path0[-1]], color="tab:red", s=40, label="end")
+
+    ax.set_title(f"Geodesic on frame {k0} at t = {frame_times[k0]:.4f} s")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("u")
+    ax.legend()
+
+    slider_ax = fig.add_axes([0.15, 0.06, 0.7, 0.04])
+    s = Slider(slider_ax, "frame", 0, len(frames) - 1, valinit=k0, valstep=1)
+
+    def update(val):
+        nonlocal surf, line, start, end
+        k = int(s.val)
+
+        Z = frames[k].copy()
+        Z[0, 1:] = np.nan
+        path = paths[k]
+        z_path = z_paths[k]
+
+        surf.remove()
+        line.remove()
+        start.remove()
+        end.remove()
+
+        surf = ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
+        line, = ax.plot(path.real, path.imag, z_path, color="black", linewidth=2.5)
+        start = ax.scatter([path[0].real], [path[0].imag], [z_path[0]], color="tab:green", s=40)
+        end = ax.scatter([path[-1].real], [path[-1].imag], [z_path[-1]], color="tab:red", s=40)
+
+        ax.set_title(f"Geodesic on frame {k} at t = {frame_times[k]:.4f} s")
         fig.canvas.draw_idle()
 
     s.on_changed(update)
