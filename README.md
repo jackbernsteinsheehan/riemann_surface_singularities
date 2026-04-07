@@ -4,6 +4,9 @@ We're modeling heat diffusion and investigating curvature. This process began wi
 
 Our long-term goal is to model curvature flow on Riemann surfaces with prescribed conical singularities, producing the uniformization metrics whose existence was establish in *Ricci flow on surfaces with conic singularities* (2015) by Mazzeo, Rubinstein, Sesum.
 
+Last changes:
+We now run the sim by running `curvature_flow.py`, and I renamed `weight_to_geodesic.py` to `geodesic_calc.py`.
+
 ### Installation
 To run the simulations, you'll need to install `python`, and run
 ```powershell
@@ -15,15 +18,15 @@ pip3 install matplotlib
 to install the necessary stack.
 
 ## Editing Simulation Parameters
-The parameters for the `curvature_flow.py` and `weight_to_geodesic.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file. The function calls at the bottom of each file load the variables from config.
+The parameters for the `curvature_flow.py` and `geodesic_calc.py` simulations can be edited in the `heat_simulations/polar/2D/config.py` file. The function calls at the bottom of each file load the variables from config.
 
 
 ## Calculating Geodesics
-In `weight_to_geodesic.py`, in the heat_simulations directory, we calculate a geodesic based on data from `curvature_flow.py`. It basically pulls a single frame or curvature state from simulations that we previously worked on in `curvature_flow.py` and calculates a geodesic trajectory across that surface.
+The  `sim_in_polar()` function in `curvature_flow.py` calls functions from `geodesic_calc.py` to plot the geodesic on the weight function, and allows the user to scroll through the frames with a slider.
 
 To calulate a geodesic and plot a geodesic, edit the variables in `heat_simulations/polar/2D/config.py` to whatever you want and then run 
 ```powershell
-python3 heat_simulations/polar/2D/weight_to_geodesic.py
+python3 heat_simulations/polar/2D/curvature_flow.py
 ```
 from the root directory (or just run the python file). After closing the first pop-up window, you should see the trajectory overlayed on the curvature plot.
 
