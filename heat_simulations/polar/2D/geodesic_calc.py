@@ -35,15 +35,14 @@ def plot_geodesic(p, v, u_idx, steps, curve_plot=False, geo_plot=True):
         ax.legend()
         plt.show()
 
-def geodesic(p, v, u_idx, steps, plot=False):
+def geodesic(u, r, theta, steps):
     """p is initial geodesic position, v is the initial velocity, both complex numbers.
     u_idx is the specific weight function at some time index"""
 
-    # Get weight function data
-    frames, frame_times, r, theta = sim_in_polar(plot=plot)
+    p = config.P
+    v = config.V
 
     # Select a weight function
-    u = frames[u_idx]
     log_u = np.log(u)
 
     # Not sure if we will end up using this dt
@@ -89,7 +88,7 @@ def geodesic(p, v, u_idx, steps, plot=False):
         gamma += dt * gamma_dot
         path.append(gamma)
         #print(abs(dz), abs(gamma_ddot))
-    return path, u, frame_times[u_idx], r, theta
+    return path
 
 def plot_geodesic_on_frame(path, u, frame_time, r, theta, u_idx):
     path_points = np.asarray(path, dtype=complex)
