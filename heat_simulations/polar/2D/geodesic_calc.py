@@ -1,5 +1,6 @@
 from curvature_flow import *
 import numpy as np
+import cmath
 from scipy.interpolate import RegularGridInterpolator
 import matplotlib.pyplot as plt
 import config
@@ -69,12 +70,21 @@ def geodesic(u, r, theta, steps):
     dlogu_dr = np.zeros_like(log_u)
     dlogu_dr[1:-1] = (log_u[2:] - log_u[:-2]) / (2 * dr)
 
+    # Precompute constants for O(1) index lookup
+    r0, Nr = r[0], len(r)
+    theta0, Ntheta = theta[0], len(theta)
+
     # Step through the simulation
     for i in range(steps):
-        ri, tj = get_closest_point(gamma, r, theta)
-        if ri <= 0 or ri >= len(r) - 1:
+        # Fast scalar coordinate extraction and nearest-index calculation
+        r_gamma, theta_gamma = cmath.polar(gamma)
+        
+        ri = int(round((r_gamma - r0) / dr))
+        if ri <= 0 or ri >= Nr - 1:
             break
         
+        tj = int(round((theta_gamma - theta0) / dtheta)) % Ntheta
+
         r_val = r[ri]
         theta_val = theta[tj]
 
@@ -82,7 +92,7 @@ def geodesic(u, r, theta, steps):
         partial_theta = dlogu_dtheta[ri, tj]
         partial_r = dlogu_dr[ri, tj]
 
-        dz = (np.exp(-1j  * theta_val) / 2) * (partial_r - (1j * r_val*partial_theta))
+        dz = (cmath.exp(-1j * theta_val) / 2) * (partial_r - (1j * r_val * partial_theta))
         gamma_ddot = -dz * (gamma_dot ** 2)
         gamma_dot += dt * gamma_ddot
         gamma += dt * gamma_dot
@@ -133,11 +143,16 @@ def get_closest_point(p, r, theta) -> tuple:
     """p is complex number, r is all radii, theta is all angles.
     returns a tuple like (radial_index, angular_index)"""
 
-    r_gamma = abs(p)
-    theta_gamma = np.angle(p)
-
-    i = np.argmin(np.abs(r - r_gamma))
-    j = np.argmin(np.abs((theta - theta_gamma + np.pi) % (2*np.pi) - np.pi))
+    r_gamma, theta_gamma = cmath.polar(p)
+    
+    dr = r[1] - r[0]
+    dtheta = theta[1] - theta[0]
+    
+    i = int(round((r_gamma - r[0]) / dr))
+    j = int(round((theta_gamma - theta[0]) / dtheta))
+    
+    i = max(0, min(len(r) - 1, i))
+    j = j % len(theta)
     return i, j 
 
 

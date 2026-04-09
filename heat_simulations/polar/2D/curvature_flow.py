@@ -98,22 +98,11 @@ def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plo
 
     return (frames, frame_times, r, theta, config.STEPS)
 
-#Cycles a list
-def cycle_left(list:np.ndarray):
-    newlist = list.copy()
-    newlist = np.append(newlist, newlist[0])
-    return newlist[1:]
-
-def cycle_right(list:np.ndarray):
-    newlist = list.copy()
-    newlist = np.insert(newlist, 0, newlist[0])
-    return newlist[:-1]
-
 #Calculate laplacian
 def laplacian(f,r,dr,theta,dtheta):
     f_rr = (f[2:] - 2 * f[1:-1] + f[:-2]) / (dr ** 2)
     f_r = (f[2:] - f[:-2]) / (2 * dr)
-    f_theta_theta = (np.apply_along_axis(cycle_left, 1, f) - 2 * f + np.apply_along_axis(cycle_right, 1, f)) / (dtheta ** 2)
+    f_theta_theta = (np.roll(f, -1, axis=1) - 2 * f + np.roll(f, 1, axis=1)) / (dtheta ** 2)
 
     return f_rr + f_r / r[1:-1, np.newaxis] + f_theta_theta[1:-1] / (r[1:-1, np.newaxis] ** 2)
 
