@@ -4,7 +4,11 @@ import matplotlib.pyplot
 import matplotlib.colors
 import matplotlib.cm
 import matplotlib.widgets
+import matplotlib.animation
+from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
+import config
+import geodesic_calc as geo
 
 
 def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
@@ -48,9 +52,6 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
     u_north[0:5,:] = .5
     u_north[10:,:] = 2
 
-    # Set frames for displaying (parallel lists)
-    save_every = 20
-
     # Calculate laplacian
     def laplacian(f):
         f_rr = (f[2:] - 2 * f[1:-1] + f[:-2]) / (dr ** 2)
@@ -82,6 +83,8 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
     K_n_init[0] = K_n_init[1].mean()
     K_n_init[-1] = K_n_init[-2]
     frames_k_north = [K_n_init]
+
+    frames_geodesic_path = [geo.geodesic(u_south, rValues, thetaValues, config.STEPS)]
     
     frame_times = [0.0]
 
@@ -105,7 +108,7 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
         u_south[0, :] = u_south[1, :].mean()
         u_north[0, :] = u_north[1, :].mean()
 
-        if (n + 1) % save_every == 0:
+        if (n + 1) % config.SAVE_EVERY == 0:
             frames_south.append(u_south.copy())
             frames_north.append(u_north.copy())
             frames_iso_south.append(isometricPlot(u_south, rValues, dr))
@@ -122,6 +125,8 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
             K_n[0] = K_n[1].mean()
             K_n[-1] = K_n[-2]
             frames_k_north.append(K_n)
+
+            frames_geodesic_path.append(geo.geodesic(u_south, rValues, thetaValues, config.STEPS))
             
             frame_times.append((n + 1) * dt)
 
@@ -131,7 +136,7 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
     Y = R * np.sin(TH)
 
     # Plot the sim
-    plot_simulation(frames_south, frames_north, frames_iso_south, frames_iso_north, frames_k_south, frames_k_north, frame_times, X, Y, TH, rho_t)
+    plot_simulation(frames_south, frames_north, frames_iso_south, frames_iso_north, frames_k_south, frames_k_north, frames_geodesic_path, frame_times, X, Y, TH, rValues, thetaValues, rho_t)
 
 # Converts u data into isometric embedding in R^3.  Only works for radially symmetric u
 def isometricPlot(u, rValues, dr):
@@ -145,7 +150,7 @@ def isometricPlot(u, rValues, dr):
     return np.array([cVals, hVals])
 
 
-def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_frames, k_south_frames, k_north_frames, times, X, Y, TH, rho_t):
+def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_frames, k_south_frames, k_north_frames, geodesic_frames, times, X, Y, TH, rValues, thetaValues, rho_t):
     if not south_frames or not north_frames:
         raise ValueError("Frames lists cannot be empty.")
 
@@ -223,8 +228,22 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
         # Draw southern hemisphere weight function
         Z_south = south_frames[frame_idx]
-        surfaces["south"] = south_ax.plot_surface(X, Y, Z_south, cmap="jet", vmin=south_zmin, vmax=south_zmax, shade=True)
+        surfaces["south"] = south_ax.plot_surface(X, Y, Z_south, cmap="jet", vmin=south_zmin, vmax=south_zmax, shade=True, alpha=0.85)
         south_ax.set_title(f"Southern Hemisphere Weight Function\n{time_str}")
+
+        path = np.asarray(geodesic_frames[frame_idx], dtype=complex)
+        if len(path) > 0:
+            interp_u = RegularGridInterpolator((rValues, thetaValues), Z_south, method='cubic', bounds_error=False, fill_value=None)
+            r_path = np.abs(path)
+            theta_path = np.angle(path)
+            z_path = interp_u(np.column_stack((r_path, theta_path)))
+            
+            x_path = r_path * np.cos(theta_path)
+            y_path = r_path * np.sin(theta_path)
+            
+            surfaces["south_geo"], = south_ax.plot(x_path, y_path, z_path, color="black", linewidth=2.5)
+            surfaces["south_geo_start"] = south_ax.scatter([x_path[0]], [y_path[0]], [z_path[0]], color="tab:green", s=40)
+            surfaces["south_geo_end"] = south_ax.scatter([x_path[-1]], [y_path[-1]], [z_path[-1]], color="tab:red", s=40)
 
         # Draw northern hemisphere weight function
         Z_north = north_frames[frame_idx]
@@ -267,6 +286,16 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         fig.canvas.draw_idle()
 
     time_slider.on_changed(update)
+
+    print("Exporting video to curvature_flow_on_sphere.mp4 (this may take a minute)...")
+    fps = num_frames / 10.0
+    anim = matplotlib.animation.FuncAnimation(fig, draw_frame, frames=num_frames, blit=False)
+    anim.save("curvature_flow_on_sphere.mp4", fps=fps)
+    anim.pause()  # Stop the animation from automatically looping in the interactive window
+    print("Video export complete.")
+
+    draw_frame(int(time_slider.val))  # Reset the plot to match the slider's initial position
+
     matplotlib.pyplot.show()
 
 if __name__ == "__main__":
