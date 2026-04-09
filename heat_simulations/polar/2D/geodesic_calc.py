@@ -47,7 +47,7 @@ def geodesic(u, r, theta, steps):
     log_u = np.log(u)
 
     # Not sure if we will end up using this dt
-    dt = 1e-3
+    dt = 1e-2
 
     # Initial state
     gamma = p

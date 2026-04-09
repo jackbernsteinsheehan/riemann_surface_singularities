@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib
 import matplotlib.pyplot
@@ -287,12 +288,14 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
     time_slider.on_changed(update)
 
-    print("Exporting video to curvature_flow_on_sphere.mp4 (this may take a minute)...")
-    fps = num_frames / 10.0
-    anim = matplotlib.animation.FuncAnimation(fig, draw_frame, frames=num_frames, blit=False)
-    anim.save("curvature_flow_on_sphere.mp4", fps=fps)
-    anim.pause()  # Stop the animation from automatically looping in the interactive window
-    print("Video export complete.")
+    # script_dir = os.path.dirname(os.path.abspath(__file__))
+    # output_path = os.path.join(script_dir, "curvature_flow_on_sphere.mp4")
+    # print(f"Exporting video to {output_path} (this may take a minute)...")
+    # fps = num_frames / 10.0
+    # anim = matplotlib.animation.FuncAnimation(fig, draw_frame, frames=num_frames, blit=False)
+    # anim.save(output_path, fps=fps)
+    # anim.pause()  # Stop the animation from automatically looping in the interactive window
+    # print("Video export complete.")
 
     draw_frame(int(time_slider.val))  # Reset the plot to match the slider's initial position
 
