@@ -209,7 +209,7 @@ def plot_geo_with_slider(frames, frame_times, r, theta):
     paths = []
     z_paths = []
 
-    for frame in frames:
+    for frame in tqdm(frames):
         path = np.asarray(geo.geodesic(frame, r, theta, config.STEPS), dtype=complex)
         interp_u = RegularGridInterpolator(
             (r, theta),
