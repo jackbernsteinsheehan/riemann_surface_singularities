@@ -1,11 +1,7 @@
 import os
 import numpy as np
-import matplotlib
-import matplotlib.pyplot
-import matplotlib.colors
-import matplotlib.cm
-import matplotlib.widgets
-import matplotlib.animation
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
 import config
@@ -160,34 +156,21 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
     num_frames = len(south_frames)
 
-    fig = matplotlib.pyplot.figure(figsize=(12, 10))
-    fig.subplots_adjust(bottom=0.18)
-
-    # Setup 3D subplots for the individual weight functions
-    south_ax = fig.add_subplot(2, 2, 3, projection="3d")
-    south_zmin = float(min(f.min() for f in south_frames))
-    south_zmax = float(max(f.max() for f in south_frames))
-    south_ax.set(zlim=(south_zmin, south_zmax), xlabel="x", ylabel="y", zlabel="u_south")
-
-    north_ax = fig.add_subplot(2, 2, 1, projection="3d")
-    north_zmin = float(min(f.min() for f in north_frames))
-    north_zmax = float(max(f.max() for f in north_frames))
-    north_ax.set(zlim=(north_zmin, north_zmax), xlabel="x", ylabel="y", zlabel="u_north")
-
-    # Setup a taller subplot spanning the right side for the full isometric embedding
-    iso_ax = fig.add_subplot(2, 2, (2, 4), projection="3d")
-
-    # Calculate global minimum and maximum curvature values across all frames 
-    # to ensure the color scale remains consistent throughout the animation.
+    # Calculate global min/max for color scaling
     all_k = [k for k_frames in (k_south_frames, k_north_frames) for k in k_frames]
     k_min = float(min(k.min() for k in all_k))
     k_max = float(max(k.max() for k in all_k))
     
     max_dev = max(abs(k_max - rho_t), abs(k_min - rho_t)) / 2
     k_margin = max_dev * 0.1 if max_dev > 0 else 0.1
-    norm = matplotlib.colors.Normalize(vmin=k_min - k_margin, vmax=rho_t / 4 + max_dev + k_margin)
-    
-    # Determine the bounding box for the isometric plot across all frames
+    cmin = k_min - k_margin
+    cmax = rho_t / 4 + max_dev + k_margin
+
+    south_zmin = float(min(f.min() for f in south_frames))
+    south_zmax = float(max(f.max() for f in south_frames))
+    north_zmin = float(min(f.min() for f in north_frames))
+    north_zmax = float(max(f.max() for f in north_frames))
+
     all_iso_h = []
     all_iso_c = []
     for (cs, hs), (cn, hn) in zip(iso_south_frames, iso_north_frames):
@@ -196,7 +179,6 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         if not np.isnan(cs).all():
             all_iso_c.append(np.nanmax(cs))
             
-        # Account for the shifted height of the north hemisphere
         hn_shifted = hs[-1, 0] + hn[-1, 0] - hn
         if not np.isnan(hn_shifted).all():
             all_iso_h.extend([np.nanmin(hn_shifted), np.nanmax(hn_shifted)])
@@ -206,31 +188,19 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     iso_hmin = float(min(all_iso_h)) if all_iso_h else 0.0
     iso_hmax = float(max(all_iso_h)) if all_iso_h else 1.0
     iso_cmax = float(max(all_iso_c)) if all_iso_c else 1.0
-    iso_ax.set(zlim=(iso_hmin, iso_hmax), xlim=(-iso_cmax, iso_cmax), ylim=(-iso_cmax, iso_cmax),
-               xlabel="x", ylabel="y", zlabel="height")
 
-    # Add a global colorbar corresponding to the curvature values in the isometric plot
-    sm = matplotlib.cm.ScalarMappable(cmap='jet', norm=norm)
-    sm.set_array([])
-    cax = fig.add_axes((0.88, 0.15, 0.02, 0.3))
-    fig.colorbar(sm, cax=cax, label="Curvature")
+    fig = make_subplots(
+        rows=2, cols=2,
+        specs=[[{"type": "surface"}, {"type": "surface", "rowspan": 2}],
+               [{"type": "surface"}, None]],
+        subplot_titles=("Northern Hemisphere Weight", "Isometric Embedding", "Southern Hemisphere Weight"),
+        vertical_spacing=0.1,
+        horizontal_spacing=0.1
+    )
 
-    # We store the 3D surface objects in a dictionary so we can efficiently 
-    # clear the old ones before rendering the next frame.
-    surfaces = {}
-
-    def draw_frame(frame_idx):
-        # Remove old surfaces
-        for surface in surfaces.values():
-            surface.remove()
-        surfaces.clear()
-
-        time_str = f"t = {times[frame_idx]:.4f} s (frame={frame_idx})"
-
-        # Draw southern hemisphere weight function
+    def get_frame_data(frame_idx):
         Z_south = south_frames[frame_idx]
-        surfaces["south"] = south_ax.plot_surface(X, Y, Z_south, cmap="jet", vmin=south_zmin, vmax=south_zmax, shade=True, alpha=0.85)
-        south_ax.set_title(f"Southern Hemisphere Weight Function\n{time_str}")
+        Z_north = north_frames[frame_idx]
 
         path = np.asarray(geodesic_frames[frame_idx], dtype=complex)
         if len(path) > 0:
@@ -238,68 +208,150 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
             r_path = np.abs(path)
             theta_path = np.angle(path)
             z_path = interp_u(np.column_stack((r_path, theta_path))) + 0.05
-            
             x_path = r_path * np.cos(theta_path)
             y_path = r_path * np.sin(theta_path)
-            
-            surfaces["south_geo"], = south_ax.plot(x_path, y_path, z_path, color="black", linewidth=2.5)
-            surfaces["south_geo_start"] = south_ax.scatter([x_path[0]], [y_path[0]], [z_path[0]], color="tab:green", s=40)
-            surfaces["south_geo_end"] = south_ax.scatter([x_path[-1]], [y_path[-1]], [z_path[-1]], color="tab:red", s=40)
+        else:
+            x_path, y_path, z_path = [None], [None], [None]
 
-        # Draw northern hemisphere weight function
-        Z_north = north_frames[frame_idx]
-        surfaces["north"] = north_ax.plot_surface(X, Y, Z_north, cmap="jet", vmin=north_zmin, vmax=north_zmax, shade=True)
-        north_ax.set_title(f"Northern Hemisphere Weight Function\n{time_str}")
-
-        # Draw Isometric embedding (South)
         c_vals_s, h_vals_s = iso_south_frames[frame_idx]
         X_iso_s = c_vals_s * np.cos(TH)
         Y_iso_s = c_vals_s * np.sin(TH)
         Z_iso_s = h_vals_s
         K_s = k_south_frames[frame_idx]
-        # Average curvature to apply face colors per grid square rather than per vertex
-        K_face_s = (K_s[:-1, :-1] + K_s[1:, :-1] + K_s[:-1, 1:] + K_s[1:, 1:]) / 4
-        colors_s = matplotlib.colormaps['jet'](norm(K_face_s))
-        surfaces["iso_south"] = iso_ax.plot_surface(X_iso_s, Y_iso_s, Z_iso_s, facecolors=colors_s, shade=True, edgecolor='k', linewidth=0.1)
 
-        # Draw Isometric embedding (North)
         c_vals_n, h_vals_n = iso_north_frames[frame_idx]
         X_iso_n = c_vals_n * np.cos(TH)
         Y_iso_n = c_vals_n * np.sin(TH)
-        # Calculate Z height so that the equator connects seamlessly and the north pole is inverted
         Z_iso_n = h_vals_s[-1, 0] + h_vals_n[-1, 0] - h_vals_n
         K_n = k_north_frames[frame_idx]
-        K_face_n = (K_n[:-1, :-1] + K_n[1:, :-1] + K_n[:-1, 1:] + K_n[1:, 1:]) / 4
-        colors_n = matplotlib.colormaps['jet'](norm(K_face_n))
-        surfaces["iso_north"] = iso_ax.plot_surface(X_iso_n[::-1], Y_iso_n[::-1], Z_iso_n[::-1], facecolors=colors_n[::-1], shade=True, edgecolor='k', linewidth=0.1)
         
-        iso_ax.set_title(f"Isometric Embedding at {time_str}")
+        return Z_south, Z_north, x_path, y_path, z_path, X_iso_s, Y_iso_s, Z_iso_s, K_s, X_iso_n, Y_iso_n, Z_iso_n, K_n
 
-    # Initialize the plot with the first frame
-    draw_frame(0)
+    Z_south, Z_north, x_path, y_path, z_path, X_iso_s, Y_iso_s, Z_iso_s, K_s, X_iso_n, Y_iso_n, Z_iso_n, K_n = get_frame_data(0)
 
-    # Setup the interactive slider for scrubbing through time
-    slider_ax = fig.add_axes((0.15, 0.06, 0.7, 0.04))
-    time_slider = matplotlib.widgets.Slider(slider_ax, "frame", 0, num_frames - 1, valinit=0, valstep=1)
+    fig.add_trace(go.Surface(x=X, y=Y, z=Z_north, colorscale='Jet', cmin=north_zmin, cmax=north_zmax, showscale=False), row=1, col=1)
+    fig.add_trace(go.Surface(x=X, y=Y, z=Z_south, colorscale='Jet', cmin=south_zmin, cmax=south_zmax, showscale=False), row=2, col=1)
+    
+    fig.add_trace(go.Scatter3d(x=x_path, y=y_path, z=z_path, mode='lines', line=dict(color='black', width=4), showlegend=False), row=2, col=1)
+    
+    if x_path[0] is not None:
+        start_x, start_y, start_z = [x_path[0]], [y_path[0]], [z_path[0]]
+        end_x, end_y, end_z = [x_path[-1]], [y_path[-1]], [z_path[-1]]
+    else:
+        start_x, start_y, start_z = [None], [None], [None]
+        end_x, end_y, end_z = [None], [None], [None]
+        
+    fig.add_trace(go.Scatter3d(x=start_x, y=start_y, z=start_z, mode='markers', marker=dict(color='green', size=5), showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter3d(x=end_x, y=end_y, z=end_z, mode='markers', marker=dict(color='red', size=5), showlegend=False), row=2, col=1)
 
-    def update(val):
-        draw_frame(int(time_slider.val))
-        fig.canvas.draw_idle()
+    fig.add_trace(go.Surface(x=X_iso_s, y=Y_iso_s, z=Z_iso_s, surfacecolor=K_s, colorscale='Jet', cmin=cmin, cmax=cmax, colorbar=dict(title="Curvature")), row=1, col=2)
+    fig.add_trace(go.Surface(x=X_iso_n[::-1], y=Y_iso_n[::-1], z=Z_iso_n[::-1], surfacecolor=K_n[::-1], colorscale='Jet', cmin=cmin, cmax=cmax, showscale=False), row=1, col=2)
 
-    time_slider.on_changed(update)
+    frames = []
+    for i in range(num_frames):
+        Z_s, Z_n, xp, yp, zp, Xis, Yis, Zis, Ks, Xin, Yin, Zin, Kn = get_frame_data(i)
+        
+        if xp[0] is not None:
+            start_x, start_y, start_z = [xp[0]], [yp[0]], [zp[0]]
+            end_x, end_y, end_z = [xp[-1]], [yp[-1]], [zp[-1]]
+        else:
+            start_x, start_y, start_z = [None], [None], [None]
+            end_x, end_y, end_z = [None], [None], [None]
 
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # output_path = os.path.join(script_dir, "curvature_flow_on_sphere.mp4")
-    # print(f"Exporting video to {output_path} (this may take a minute)...")
-    # fps = num_frames / 10.0
-    # anim = matplotlib.animation.FuncAnimation(fig, draw_frame, frames=num_frames, blit=False)
-    # anim.save(output_path, fps=fps)
-    # anim.pause()  # Stop the animation from automatically looping in the interactive window
-    # print("Video export complete.")
+        frame = go.Frame(
+            data=[
+                go.Surface(z=Z_n), # trace 0
+                go.Surface(z=Z_s), # trace 1
+                go.Scatter3d(x=xp, y=yp, z=zp), # trace 2
+                go.Scatter3d(x=start_x, y=start_y, z=start_z), # trace 3
+                go.Scatter3d(x=end_x, y=end_y, z=end_z), # trace 4
+                go.Surface(x=Xis, y=Yis, z=Zis, surfacecolor=Ks), # trace 5
+                go.Surface(x=Xin[::-1], y=Yin[::-1], z=Zin[::-1], surfacecolor=Kn[::-1]) # trace 6
+            ],
+            name=str(i),
+            traces=[0, 1, 2, 3, 4, 5, 6]
+        )
+        frames.append(frame)
 
-    draw_frame(int(time_slider.val))  # Reset the plot to match the slider's initial position
+    fig.frames = frames
 
-    matplotlib.pyplot.show()
+    max_xy = float(np.max(np.abs(X)))
+
+    fig.update_layout(
+        title="Curvature Flow Simulation",
+        height=900,
+        scene=dict(
+            xaxis_title="x", yaxis_title="y", zaxis_title="u_north",
+            xaxis=dict(range=[-max_xy, max_xy], autorange=False),
+            yaxis=dict(range=[-max_xy, max_xy], autorange=False),
+            zaxis=dict(range=[north_zmin, north_zmax], autorange=False),
+            aspectmode='cube'
+        ),
+        scene2=dict(
+            xaxis_title="x", yaxis_title="y", zaxis_title="height",
+            xaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
+            yaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
+            zaxis=dict(range=[iso_hmin, iso_hmax], autorange=False),
+            aspectmode='cube'
+        ),
+        scene3=dict(
+            xaxis_title="x", yaxis_title="y", zaxis_title="u_south",
+            xaxis=dict(range=[-max_xy, max_xy], autorange=False),
+            yaxis=dict(range=[-max_xy, max_xy], autorange=False),
+            zaxis=dict(range=[south_zmin, south_zmax], autorange=False),
+            aspectmode='cube'
+        ),
+        updatemenus=[{
+            "buttons": [
+                {
+                    "args": [None, {"frame": {"duration": 100, "redraw": True}, "fromcurrent": True, "transition": {"duration": 0}}],
+                    "label": "Play",
+                    "method": "animate"
+                },
+                {
+                    "args": [[None], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate", "transition": {"duration": 0}}],
+                    "label": "Pause",
+                    "method": "animate"
+                }
+            ],
+            "direction": "left",
+            "pad": {"r": 10, "t": 87},
+            "showactive": False,
+            "type": "buttons",
+            "x": 0.1,
+            "xanchor": "right",
+            "y": 0,
+            "yanchor": "top"
+        }],
+        sliders=[{
+            "active": 0,
+            "yanchor": "top",
+            "xanchor": "left",
+            "currentvalue": {
+                "font": {"size": 20},
+                "prefix": "Frame: ",
+                "visible": True,
+                "xanchor": "right"
+            },
+            "transition": {"duration": 0},
+            "pad": {"b": 10, "t": 50},
+            "len": 0.9,
+            "x": 0.1,
+            "y": 0,
+            "steps": [
+                {
+                    "args": [
+                        [str(i)],
+                        {"frame": {"duration": 0, "redraw": True}, "mode": "immediate", "transition": {"duration": 0}}
+                    ],
+                    "label": str(i),
+                    "method": "animate"
+                } for i in range(num_frames)
+            ]
+        }]
+    )
+
+    fig.show()
 
 if __name__ == "__main__":
     sim_in_polar()
