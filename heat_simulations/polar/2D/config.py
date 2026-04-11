@@ -4,8 +4,8 @@ T = 1
 Nr = 25
 Ntheta = 25
 
-# can be True, False, "single"
-CURVE_PLOT = False # Show curvature flow plot, or show a single frame with "single"
+# can be True, False, "single", "animate"
+CURVE_PLOT = "animate" # Show curvature flow plot, a single frame with "single", or autoplay with "animate"
 SAVE_EVERY = 50 # How often we save the state to a new frame
 BETA = 0
 RHO = 0
