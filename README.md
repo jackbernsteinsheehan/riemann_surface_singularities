@@ -95,3 +95,11 @@ Implemented geodesics. Through task #1 in TODO. Maybe we should store simulation
 4. Mess with singularities and effects on geodesics and average curvature
 
 4. Evententually remove the slider and animate it for presentation
+
+
+Jack TODO
+- Polish things up
+   - make animations
+   - experiment with making things look cooler
+   - plot geodesic more visibly
+   - decide what code to show (get latex update rule)
