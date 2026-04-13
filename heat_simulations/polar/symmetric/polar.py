@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+import tqdm
 
 # Save the state at every moment in time, and then plot at end
 # caluclate a geodesic at each moment, see how it changes with the curvature
