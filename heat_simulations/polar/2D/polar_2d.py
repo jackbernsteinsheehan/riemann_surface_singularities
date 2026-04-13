@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from tqdm import tqdm
-
+import config
 
 # Jost 2.3 up to curvature?? Fubiini-Study metric
 
@@ -53,7 +53,7 @@ def sim_in_polar(a=1.0, t=1.0, Nr=30, Ntheta=90):
     # set frames for displaying (parallel lists)
     frames = []
     frame_times = []
-    save_every = 200
+    save_every = config.SAVE_EVERY
     u_next = np.zeros_like(u)
 
     # The model: updates for each time step t
