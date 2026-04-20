@@ -6,7 +6,7 @@ Ntheta = 25
 
 # can be True, False, "single", "animate"
 CURVE_PLOT = "animate" # Show curvature flow plot, a single frame with "single", or autoplay with "animate"
-SAVE_EVERY = 600 # How often we save the state to a new frame
+SAVE_EVERY = 100 # How often we save the state to a new frame
 BETA = 0
 RHO = 0
 
