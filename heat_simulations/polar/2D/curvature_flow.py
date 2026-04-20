@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Button, Slider
 from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
 import config
@@ -88,13 +88,18 @@ def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plo
             plot_geo_with_slider(frames, frame_times, r, theta)
         else:
             plot_frames_with_slider(frames, frame_times, X, Y)
-    elif config.CURVE_PLOT == "single":
+    elif plot == "animate":
+        if config.GEO_PLOT:
+            plot_geo_as_animation(frames, frame_times, r, theta)
+        else:
+            plot_frames_as_animation(frames, frame_times, X, Y)
+    elif plot == "single":
         plot_single_frame(frames, frame_times, X, Y, config.U_IDX)
-    if config.GEO_PLOT == True and plot != True:
-        path = geo.geodesic(u, r, theta, config.STEPS)
-        time = dt*n
-        #geo.plot_geodesic_on_frame(path, u, time, r, theta, config.U_IDX)
-        plot_geo_with_slider(frames, frame_times, r, theta)
+    elif config.GEO_PLOT:
+        if plot == "animate":
+            plot_geo_as_animation(frames, frame_times, r, theta)
+        else:
+            plot_geo_with_slider(frames, frame_times, r, theta)
 
     return (frames, frame_times, r, theta, config.STEPS)
 
@@ -192,6 +197,76 @@ def plot_frames_with_slider(frames, frame_times, X, Y):
     plt.show()
 
 
+def plot_frames_as_animation(frames, frame_times, X, Y, interval_ms=100):
+    if len(frames) == 0:
+        raise ValueError("frames is empty")
+
+    if frame_times is None or len(frame_times) != len(frames):
+        frame_times = [float(k) for k in range(len(frames))]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    fig.subplots_adjust(bottom=0.18)
+
+    zmin = float(min(f.min() for f in frames))
+    zmax = float(max(f.max() for f in frames))
+    ax.set_zlim(zmin, zmax)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("Temp")
+
+    k0 = 0
+    Z0 = frames[k0].copy()
+    Z0[0, 1:] = np.nan
+    surf = ax.plot_surface(X, Y, Z0, cmap="jet", vmin=zmin, vmax=zmax, shade=True)
+    ax.set_title(f"t = {frame_times[k0]:.4f} s (frame={k0})")
+
+    current_frame = {"idx": 0}
+    timer = fig.canvas.new_timer(interval=interval_ms)
+
+    def draw_frame(k):
+        nonlocal surf
+        Z = frames[k].copy()
+        Z[0, 1:] = np.nan
+        surf.remove()
+        surf = ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True)
+        ax.set_title(f"t = {frame_times[k]:.4f} s (frame={k})")
+        return (surf,)
+
+    def step():
+        next_idx = (current_frame["idx"] + 1) % len(frames)
+        current_frame["idx"] = next_idx
+        draw_frame(next_idx)
+        fig.canvas.draw_idle()
+
+    timer.add_callback(step)
+
+    rewind_ax = fig.add_axes([0.23, 0.05, 0.16, 0.05])
+    pause_ax = fig.add_axes([0.42, 0.05, 0.12, 0.05])
+    play_ax = fig.add_axes([0.57, 0.05, 0.12, 0.05])
+    rewind_button = Button(rewind_ax, "Rewind")
+    pause_button = Button(pause_ax, "Pause")
+    play_button = Button(play_ax, "Play")
+
+    def rewind(_event):
+        timer.stop()
+        current_frame["idx"] = 0
+        draw_frame(0)
+        fig.canvas.draw_idle()
+
+    def pause(_event):
+        timer.stop()
+
+    def play(_event):
+        timer.start()
+
+    rewind_button.on_clicked(rewind)
+    pause_button.on_clicked(pause)
+    play_button.on_clicked(play)
+    fig._timer = timer
+    plt.show()
+
+
 def plot_geo_with_slider(frames, frame_times, r, theta):
     if len(frames) == 0:
         raise ValueError("frames is empty")
@@ -277,6 +352,120 @@ def plot_geo_with_slider(frames, frame_times, r, theta):
         fig.canvas.draw_idle()
 
     s.on_changed(update)
+    plt.show()
+
+
+def plot_geo_as_animation(frames, frame_times, r, theta, interval_ms=100):
+    if len(frames) == 0:
+        raise ValueError("frames is empty")
+
+    if frame_times is None or len(frame_times) != len(frames):
+        frame_times = [float(k) for k in range(len(frames))]
+
+    R, TH = np.meshgrid(r, theta, indexing="ij")
+    phi = (1 - BETA) * TH
+    X = R * np.cos(phi)
+    Y = R * np.sin(phi)
+
+    zmin = float(min(np.nanmin(frame) for frame in frames))
+    zmax = float(max(np.nanmax(frame) for frame in frames))
+    paths = []
+    z_paths = []
+
+    for frame in tqdm(frames):
+        path = np.asarray(geo.geodesic(frame, r, theta, config.STEPS), dtype=complex)
+        interp_u = RegularGridInterpolator(
+            (r, theta),
+            frame,
+            method="cubic",
+            bounds_error=False,
+            fill_value=None,
+        )
+        z_path = np.asarray(
+            [interp_u([np.abs(gamma), np.angle(gamma)])[0] for gamma in path],
+            dtype=float,
+        )
+        paths.append(path)
+        z_paths.append(z_path)
+
+        if len(z_path) > 0:
+            zmin = min(zmin, float(np.nanmin(z_path)))
+            zmax = max(zmax, float(np.nanmax(z_path)))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    fig.subplots_adjust(bottom=0.18)
+    ax.set_zlim(zmin, zmax)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("u")
+
+    k0 = 0
+    Z0 = frames[k0].copy()
+    Z0[0, 1:] = np.nan
+    surf = ax.plot_surface(X, Y, Z0, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
+
+    path0 = paths[k0]
+    z_path0 = z_paths[k0]
+    line, = ax.plot(path0.real, path0.imag, z_path0, color="black", linewidth=2.5, label="geodesic")
+    start = ax.scatter([path0[0].real], [path0[0].imag], [z_path0[0]], color="tab:green", s=40, label="start")
+    end = ax.scatter([path0[-1].real], [path0[-1].imag], [z_path0[-1]], color="tab:red", s=40, label="end")
+    ax.set_title(f"Geodesic on frame {k0} at t = {frame_times[k0]:.4f} s")
+    ax.legend()
+
+    current_frame = {"idx": 0}
+    timer = fig.canvas.new_timer(interval=interval_ms)
+
+    def draw_frame(k):
+        nonlocal surf, line, start, end
+        Z = frames[k].copy()
+        Z[0, 1:] = np.nan
+        path = paths[k]
+        z_path = z_paths[k]
+
+        surf.remove()
+        line.remove()
+        start.remove()
+        end.remove()
+
+        surf = ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
+        line, = ax.plot(path.real, path.imag, z_path, color="black", linewidth=2.5)
+        start = ax.scatter([path[0].real], [path[0].imag], [z_path[0]], color="tab:green", s=40)
+        end = ax.scatter([path[-1].real], [path[-1].imag], [z_path[-1]], color="tab:red", s=40)
+        ax.set_title(f"Geodesic on frame {k} at t = {frame_times[k]:.4f} s")
+        return (surf, line, start, end)
+
+    def step():
+        next_idx = (current_frame["idx"] + 1) % len(frames)
+        current_frame["idx"] = next_idx
+        draw_frame(next_idx)
+        fig.canvas.draw_idle()
+
+    timer.add_callback(step)
+
+    rewind_ax = fig.add_axes([0.23, 0.05, 0.16, 0.05])
+    pause_ax = fig.add_axes([0.42, 0.05, 0.12, 0.05])
+    play_ax = fig.add_axes([0.57, 0.05, 0.12, 0.05])
+    rewind_button = Button(rewind_ax, "Rewind")
+    pause_button = Button(pause_ax, "Pause")
+    play_button = Button(play_ax, "Play")
+
+    def rewind(_event):
+        timer.stop()
+        current_frame["idx"] = 0
+        draw_frame(0)
+        fig.canvas.draw_idle()
+
+    def pause(_event):
+        timer.stop()
+
+    def play(_event):
+        timer.start()
+
+    rewind_button.on_clicked(rewind)
+    pause_button.on_clicked(pause)
+    play_button.on_clicked(play)
+    fig._timer = timer
     plt.show()
 
 if __name__ == "__main__":

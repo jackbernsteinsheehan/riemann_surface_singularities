@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Button
 from tqdm import tqdm
-
+import config
 
 # Jost 2.3 up to curvature?? Fubiini-Study metric
 
@@ -53,7 +53,7 @@ def sim_in_polar(a=1.0, t=1.0, Nr=30, Ntheta=90):
     # set frames for displaying (parallel lists)
     frames = []
     frame_times = []
-    save_every = 200
+    save_every = config.SAVE_EVERY
     u_next = np.zeros_like(u)
 
     # The model: updates for each time step t
@@ -106,7 +106,7 @@ def sim_in_polar(a=1.0, t=1.0, Nr=30, Ntheta=90):
     Y = R * np.sin(phi)
 
     # Plot the sim
-    plot_frames_with_slider(frames, frame_times, X, Y)
+    plot_frames_as_animation(frames, frame_times, X, Y)
 
 #Calculate laplacian
 def laplacian(f,r,dr,theta,dtheta):
@@ -130,14 +130,12 @@ def set_boundary(w:np.ndarray, theta):
     return l
 
 
-def plot_frames_with_slider(frames, frame_times, X, Y):
+def plot_frames_as_animation(frames, frame_times, X, Y, interval_ms=100):
     if len(frames) == 0:
         raise ValueError("frames is empty")
 
     if frame_times is None or len(frame_times) != len(frames):
         frame_times = [float(k) for k in range(len(frames))]
-
-    n_frames = len(frames)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -158,22 +156,49 @@ def plot_frames_with_slider(frames, frame_times, X, Y):
     ax.set_ylabel("y")
     ax.set_zlabel("Temp")
 
-    slider_ax = fig.add_axes([0.15, 0.06, 0.7, 0.04])
-    s = Slider(slider_ax, "frame", 0, n_frames - 1, valinit=k0, valstep=1)
+    current_frame = {"idx": 0}
+    timer = fig.canvas.new_timer(interval=interval_ms)
 
-    def update(val):
+    def draw_frame(k):
         nonlocal surf
-        k = int(s.val)          # <-- k is defined here
-
         Z = frames[k].copy()
-        Z[0, 1:] = np.nan       # same masking on updates
-
+        Z[0, 1:] = np.nan
         surf.remove()
         surf = ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True)
         ax.set_title(f"t = {frame_times[k]:.4f} s (frame={k})")
+        return (surf,)
+
+    def step():
+        next_idx = (current_frame["idx"] + 1) % len(frames)
+        current_frame["idx"] = next_idx
+        draw_frame(next_idx)
         fig.canvas.draw_idle()
 
-    s.on_changed(update)
+    timer.add_callback(step)
+
+    rewind_ax = fig.add_axes([0.23, 0.05, 0.16, 0.05])
+    pause_ax = fig.add_axes([0.42, 0.05, 0.12, 0.05])
+    play_ax = fig.add_axes([0.57, 0.05, 0.12, 0.05])
+    rewind_button = Button(rewind_ax, "Rewind")
+    pause_button = Button(pause_ax, "Pause")
+    play_button = Button(play_ax, "Play")
+
+    def rewind(_event):
+        timer.stop()
+        current_frame["idx"] = 0
+        draw_frame(0)
+        fig.canvas.draw_idle()
+
+    def pause(_event):
+        timer.stop()
+
+    def play(_event):
+        timer.start()
+
+    rewind_button.on_clicked(rewind)
+    pause_button.on_clicked(pause)
+    play_button.on_clicked(play)
+    fig._timer = timer
     plt.show()
 
 if __name__ == "__main__":

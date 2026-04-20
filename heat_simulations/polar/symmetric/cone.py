@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Button
+from tqdm import tqdm
 
 # Save the state at every moment in time, and then plot at end
 # caluclate a geodesic at each moment, see how it changes with the curvature
@@ -38,7 +39,7 @@ def sim_in_polar(a=1.0, t=1.0, Nr=80, Ntheta=80):
     u[0] = set_boundary(u[0])
 
     # The model: updates for each time step t
-    for n in range(t_nodes - 1):
+    for n in tqdm(range(t_nodes - 1)):
         w = u[n]
         #print(np.log(w))
         log_w = np.log(w)
@@ -70,7 +71,7 @@ def sim_in_polar(a=1.0, t=1.0, Nr=80, Ntheta=80):
     Y = R * np.sin(phi)
 
     # Plot the sim
-    plot_u_with_slider(u, X, Y, dt)
+    plot_u_as_animation(u, X, Y, dt)
 
 
 def set_boundary(w:np.ndarray):
@@ -81,7 +82,7 @@ def set_boundary(w:np.ndarray):
     return l
 
 
-def plot_u_with_slider(u, X, Y, dt):
+def plot_u_as_animation(u, X, Y, dt, interval_ms=100):
     t_nodes = u.shape[0]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -98,18 +99,47 @@ def plot_u_with_slider(u, X, Y, dt):
     ax.set_ylabel("y")
     ax.set_zlabel("Temp")
 
-    slider_ax = fig.add_axes([0.15, 0.06, 0.7, 0.04])
-    s = Slider(slider_ax, "time index k", 0, t_nodes - 1, valinit=k0, valstep=1)
+    current_frame = {"idx": 0}
+    timer = fig.canvas.new_timer(interval=interval_ms)
 
-    def update(val):
+    def draw_frame(k):
         nonlocal surf
-        k = int(s.val)
         surf.remove()
         surf = ax.plot_surface(X, Y, u[k], cmap="jet", vmin=zmin, vmax=zmax, shade=True)
         ax.set_title(f"t = {k*dt:.4f} s (k={k})")
+        return (surf,)
+
+    def step():
+        next_idx = (current_frame["idx"] + 1) % t_nodes
+        current_frame["idx"] = next_idx
+        draw_frame(next_idx)
         fig.canvas.draw_idle()
 
-    s.on_changed(update)
+    timer.add_callback(step)
+
+    rewind_ax = fig.add_axes([0.23, 0.05, 0.16, 0.05])
+    pause_ax = fig.add_axes([0.42, 0.05, 0.12, 0.05])
+    play_ax = fig.add_axes([0.57, 0.05, 0.12, 0.05])
+    rewind_button = Button(rewind_ax, "Rewind")
+    pause_button = Button(pause_ax, "Pause")
+    play_button = Button(play_ax, "Play")
+
+    def rewind(_event):
+        timer.stop()
+        current_frame["idx"] = 0
+        draw_frame(0)
+        fig.canvas.draw_idle()
+
+    def pause(_event):
+        timer.stop()
+
+    def play(_event):
+        timer.start()
+
+    rewind_button.on_clicked(rewind)
+    pause_button.on_clicked(pause)
+    play_button.on_clicked(play)
+    fig._timer = timer
     plt.show()
 
 

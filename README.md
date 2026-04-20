@@ -22,7 +22,7 @@ The parameters for the `curvature_flow.py` and `geodesic_calc.py` simulations ca
 
 
 ## Calculating Geodesics
-The  `sim_in_polar()` function in `curvature_flow.py` calls functions from `geodesic_calc.py` to plot the geodesic on the weight function, and allows the user to scroll through the frames with a slider.
+The  `sim_in_polar()` function in `curvature_flow.py` calls functions from `geodesic_calc.py` to plot the geodesic on the weight function, and lets you either scroll through the frames with a slider or autoplay them as an animation.
 
 To calulate a geodesic and plot a geodesic, edit the variables in `heat_simulations/polar/2D/config.py` to whatever you want and then run 
 ```powershell
@@ -38,8 +38,8 @@ T = 1
 Nr = 50
 Ntheta = 50
 
-# can be True, False, "single"
-CURVE_PLOT = "single" # Show curvature flow plot, or show a single frame with "single"
+# can be True, False, "single", "animate"
+CURVE_PLOT = "single" # Show curvature flow plot, a single frame with "single", or autoplay with "animate"
 SAVE_EVERY = 200 # How often we save the state to a new frame
 BETA = 0
 RHO = 0
@@ -95,3 +95,11 @@ Implemented geodesics. Through task #1 in TODO. Maybe we should store simulation
 4. Mess with singularities and effects on geodesics and average curvature
 
 4. Evententually remove the slider and animate it for presentation
+
+
+Jack TODO
+- Polish things up
+   - make animations
+   - experiment with making things look cooler
+   - plot geodesic more visibly
+   - decide what code to show (get latex update rule)
