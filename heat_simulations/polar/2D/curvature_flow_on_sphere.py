@@ -11,6 +11,8 @@ from tqdm import tqdm
 import config
 import geodesic_calc as geo
 
+GEODPLOT = False
+
 
 def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
 
@@ -85,7 +87,10 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
     K_n_init[-1] = K_n_init[-2]
     frames_k_north = [K_n_init]
 
-    frames_geodesic_path = [geo.geodesic(u_south, rValues, thetaValues, config.STEPS)]
+    if GEODPLOT:
+        frames_geodesic_path = [geo.geodesic(u_south, rValues, thetaValues, config.STEPS)]
+    else:
+        frames_geodesic_path = [[]]
     
     frame_times = [0.0]
 
@@ -102,8 +107,8 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
         u_north[1:-1] = u_north[1:-1] + dt * a* (rho_t * u_north[1:-1] - R_north)
 
         # Update boundary by pulling back u_north * |dz|^2 to update u_south and vice versa
-        u_south[-1] = 1 / (1 + dr)**4 * np.flip(u_north[-3])
-        u_north[-1] = 1 / (1 + dr)**4 * np.flip(u_south[-3])
+        u_south[-1] = 1 / (1 + dr)**4 * np.flip(0.8 * u_north[-3] + 0.2 * u_north[-4])
+        u_north[-1] = 1 / (1 + dr)**4 * np.flip(0.8 * u_south[-3] + 0.2 * u_south[-4])
 
         # Set r = 0 to the average of the points on the smallest radius
         u_south[0, :] = u_south[1, :].mean()
@@ -127,7 +132,10 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
             K_n[-1] = K_n[-2]
             frames_k_north.append(K_n)
 
-            frames_geodesic_path.append(geo.geodesic(u_south, rValues, thetaValues, config.STEPS))
+            if GEODPLOT:
+                frames_geodesic_path.append(geo.geodesic(u_south, rValues, thetaValues, config.STEPS))
+            else:
+                frames_geodesic_path.append([])
             
             frame_times.append((n + 1) * dt)
 
@@ -233,7 +241,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         south_ax.set_title(f"Southern Hemisphere Weight Function\n{time_str}")
 
         path = np.asarray(geodesic_frames[frame_idx], dtype=complex)
-        if len(path) > 0:
+        if GEODPLOT and len(path) > 0:
             interp_u = RegularGridInterpolator((rValues, thetaValues), Z_south, method='cubic', bounds_error=False, fill_value=None)
             r_path = np.abs(path)
             theta_path = np.angle(path)
