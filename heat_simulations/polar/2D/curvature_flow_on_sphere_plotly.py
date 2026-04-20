@@ -98,8 +98,8 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
         u_north[1:-1] = u_north[1:-1] + dt * a* (rho_t * u_north[1:-1] - R_north)
 
         # Update boundary by pulling back u_north * |dz|^2 to update u_south and vice versa
-        u_south[-1] = 1 / (1 + dr)**4 * np.flip(u_north[-3])
-        u_north[-1] = 1 / (1 + dr)**4 * np.flip(u_south[-3])
+        u_south[-1] = 1 / (1 + dr)**2 * np.flip(u_north[-3])
+        u_north[-1] = 1 / (1 + dr)**2 * np.flip(u_south[-3])
 
         # Set r = 0 to the average of the points on the smallest radius
         u_south[0, :] = u_south[1, :].mean()
