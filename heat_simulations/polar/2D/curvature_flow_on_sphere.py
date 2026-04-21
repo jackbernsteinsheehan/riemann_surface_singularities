@@ -11,7 +11,7 @@ from tqdm import tqdm
 import config
 import geodesic_calc as geo
 
-GEODPLOT = False
+GEODPLOT = True
 
 
 def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
@@ -173,7 +173,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
     # Setup 3D subplots for the individual weight functions
     south_ax = fig.add_subplot(2, 2, 3, projection="3d")
-    south_zmin = float(min(f.min() for f in south_frames))
+    south_zmin = min(0.0, float(min(f.min() for f in south_frames)))
     south_zmax = float(max(f.max() for f in south_frames))
     south_ax.set(zlim=(south_zmin, south_zmax), xlabel="x", ylabel="y", zlabel="u_south")
 
@@ -242,17 +242,35 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
         path = np.asarray(geodesic_frames[frame_idx], dtype=complex)
         if GEODPLOT and len(path) > 0:
-            interp_u = RegularGridInterpolator((rValues, thetaValues), Z_south, method='cubic', bounds_error=False, fill_value=None)
             r_path = np.abs(path)
             theta_path = np.angle(path)
-            z_path = interp_u(np.column_stack((r_path, theta_path))) + 0.05
+            z_path = np.zeros_like(r_path)
             
             x_path = r_path * np.cos(theta_path)
             y_path = r_path * np.sin(theta_path)
             
             surfaces["south_geo"], = south_ax.plot(x_path, y_path, z_path, color="black", linewidth=2.5)
-            surfaces["south_geo_start"] = south_ax.scatter([x_path[0]], [y_path[0]], [z_path[0]], color="tab:green", s=40)
-            surfaces["south_geo_end"] = south_ax.scatter([x_path[-1]], [y_path[-1]], [z_path[-1]], color="tab:red", s=40)
+            surfaces["south_geo_start"] = south_ax.scatter([x_path[0]], [y_path[0]], [0], color="tab:green", s=40)
+            surfaces["south_geo_end"] = south_ax.scatter([x_path[-1]], [y_path[-1]], [0], color="tab:red", s=40)
+
+            # Plot geodesic on the isometric embedding
+            c_vals_s, h_vals_s = iso_south_frames[frame_idx]
+            interp_c = RegularGridInterpolator((rValues, thetaValues), c_vals_s, method='cubic', bounds_error=False, fill_value=None)
+            interp_h = RegularGridInterpolator((rValues, thetaValues), h_vals_s, method='cubic', bounds_error=False, fill_value=None)
+
+            # Interpolate c and h along the path
+            points = np.column_stack((r_path, theta_path))
+            c_path = interp_c(points)
+            h_path = interp_h(points)
+
+            # Calculate isometric coordinates for the path
+            x_iso_path = c_path * np.cos(theta_path)
+            y_iso_path = c_path * np.sin(theta_path)
+            z_iso_path = h_path
+
+            surfaces["iso_geo"], = iso_ax.plot(x_iso_path, y_iso_path, z_iso_path, color="black", linewidth=2.5, zorder=10)
+            surfaces["iso_geo_start"] = iso_ax.scatter([x_iso_path[0]], [y_iso_path[0]], [z_iso_path[0]], color="tab:green", s=40, zorder=11)
+            surfaces["iso_geo_end"] = iso_ax.scatter([x_iso_path[-1]], [y_iso_path[-1]], [z_iso_path[-1]], color="tab:red", s=40, zorder=11)
 
         # Draw northern hemisphere weight function
         Z_north = north_frames[frame_idx]

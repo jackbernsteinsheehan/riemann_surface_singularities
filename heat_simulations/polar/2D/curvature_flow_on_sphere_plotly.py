@@ -2,7 +2,6 @@ import os
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
 import config
 import geodesic_calc as geo
@@ -166,7 +165,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     cmin = k_min - k_margin
     cmax = rho_t / 4 + max_dev + k_margin
 
-    south_zmin = float(min(f.min() for f in south_frames))
+    south_zmin = min(0.0, float(min(f.min() for f in south_frames)))
     south_zmax = float(max(f.max() for f in south_frames))
     north_zmin = float(min(f.min() for f in north_frames))
     north_zmax = float(max(f.max() for f in north_frames))
@@ -204,10 +203,9 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
         path = np.asarray(geodesic_frames[frame_idx], dtype=complex)
         if len(path) > 0:
-            interp_u = RegularGridInterpolator((rValues, thetaValues), Z_south, method='cubic', bounds_error=False, fill_value=None)
             r_path = np.abs(path)
             theta_path = np.angle(path)
-            z_path = interp_u(np.column_stack((r_path, theta_path))) + 0.05
+            z_path = np.zeros_like(r_path)
             x_path = r_path * np.cos(theta_path)
             y_path = r_path * np.sin(theta_path)
         else:

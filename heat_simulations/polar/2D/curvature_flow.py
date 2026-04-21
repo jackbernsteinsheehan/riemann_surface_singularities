@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
-from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
 import config
 import geodesic_calc as geo
@@ -279,30 +278,13 @@ def plot_geo_with_slider(frames, frame_times, r, theta):
     X = R * np.cos(phi)
     Y = R * np.sin(phi)
 
-    zmin = float(min(np.nanmin(frame) for frame in frames))
+    zmin = min(0.0, float(min(np.nanmin(frame) for frame in frames)))
     zmax = float(max(np.nanmax(frame) for frame in frames))
     paths = []
-    z_paths = []
 
     for frame in tqdm(frames):
         path = np.asarray(geo.geodesic(frame, r, theta, config.STEPS), dtype=complex)
-        interp_u = RegularGridInterpolator(
-            (r, theta),
-            frame,
-            method="cubic",
-            bounds_error=False,
-            fill_value=None,
-        )
-        z_path = np.asarray(
-            [interp_u([np.abs(gamma), np.angle(gamma)])[0] for gamma in path],
-            dtype=float,
-        )
         paths.append(path)
-        z_paths.append(z_path)
-
-        if len(z_path) > 0:
-            zmin = min(zmin, float(np.nanmin(z_path)))
-            zmax = max(zmax, float(np.nanmax(z_path)))
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -315,10 +297,10 @@ def plot_geo_with_slider(frames, frame_times, r, theta):
     surf = ax.plot_surface(X, Y, Z0, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
 
     path0 = paths[k0]
-    z_path0 = z_paths[k0]
+    z_path0 = np.zeros_like(path0.real)
     line, = ax.plot(path0.real, path0.imag, z_path0, color="black", linewidth=2.5, label="geodesic")
-    start = ax.scatter([path0[0].real], [path0[0].imag], [z_path0[0]], color="tab:green", s=40, label="start")
-    end = ax.scatter([path0[-1].real], [path0[-1].imag], [z_path0[-1]], color="tab:red", s=40, label="end")
+    start = ax.scatter([path0[0].real], [path0[0].imag], [0], color="tab:green", s=40, label="start")
+    end = ax.scatter([path0[-1].real], [path0[-1].imag], [0], color="tab:red", s=40, label="end")
 
     ax.set_title(f"Geodesic on frame {k0} at t = {frame_times[k0]:.4f} s")
     ax.set_xlabel("x")
@@ -336,7 +318,7 @@ def plot_geo_with_slider(frames, frame_times, r, theta):
         Z = frames[k].copy()
         Z[0, 1:] = np.nan
         path = paths[k]
-        z_path = z_paths[k]
+        z_path = np.zeros_like(path.real)
 
         surf.remove()
         line.remove()
@@ -345,8 +327,8 @@ def plot_geo_with_slider(frames, frame_times, r, theta):
 
         surf = ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
         line, = ax.plot(path.real, path.imag, z_path, color="black", linewidth=2.5)
-        start = ax.scatter([path[0].real], [path[0].imag], [z_path[0]], color="tab:green", s=40)
-        end = ax.scatter([path[-1].real], [path[-1].imag], [z_path[-1]], color="tab:red", s=40)
+        start = ax.scatter([path[0].real], [path[0].imag], [0], color="tab:green", s=40)
+        end = ax.scatter([path[-1].real], [path[-1].imag], [0], color="tab:red", s=40)
 
         ax.set_title(f"Geodesic on frame {k} at t = {frame_times[k]:.4f} s")
         fig.canvas.draw_idle()
@@ -367,30 +349,13 @@ def plot_geo_as_animation(frames, frame_times, r, theta, interval_ms=100):
     X = R * np.cos(phi)
     Y = R * np.sin(phi)
 
-    zmin = float(min(np.nanmin(frame) for frame in frames))
+    zmin = min(0.0, float(min(np.nanmin(frame) for frame in frames)))
     zmax = float(max(np.nanmax(frame) for frame in frames))
     paths = []
-    z_paths = []
 
     for frame in tqdm(frames):
         path = np.asarray(geo.geodesic(frame, r, theta, config.STEPS), dtype=complex)
-        interp_u = RegularGridInterpolator(
-            (r, theta),
-            frame,
-            method="cubic",
-            bounds_error=False,
-            fill_value=None,
-        )
-        z_path = np.asarray(
-            [interp_u([np.abs(gamma), np.angle(gamma)])[0] for gamma in path],
-            dtype=float,
-        )
         paths.append(path)
-        z_paths.append(z_path)
-
-        if len(z_path) > 0:
-            zmin = min(zmin, float(np.nanmin(z_path)))
-            zmax = max(zmax, float(np.nanmax(z_path)))
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -406,10 +371,10 @@ def plot_geo_as_animation(frames, frame_times, r, theta, interval_ms=100):
     surf = ax.plot_surface(X, Y, Z0, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
 
     path0 = paths[k0]
-    z_path0 = z_paths[k0]
+    z_path0 = np.zeros_like(path0.real)
     line, = ax.plot(path0.real, path0.imag, z_path0, color="black", linewidth=2.5, label="geodesic")
-    start = ax.scatter([path0[0].real], [path0[0].imag], [z_path0[0]], color="tab:green", s=40, label="start")
-    end = ax.scatter([path0[-1].real], [path0[-1].imag], [z_path0[-1]], color="tab:red", s=40, label="end")
+    start = ax.scatter([path0[0].real], [path0[0].imag], [0], color="tab:green", s=40, label="start")
+    end = ax.scatter([path0[-1].real], [path0[-1].imag], [0], color="tab:red", s=40, label="end")
     ax.set_title(f"Geodesic on frame {k0} at t = {frame_times[k0]:.4f} s")
     ax.legend()
 
@@ -421,7 +386,7 @@ def plot_geo_as_animation(frames, frame_times, r, theta, interval_ms=100):
         Z = frames[k].copy()
         Z[0, 1:] = np.nan
         path = paths[k]
-        z_path = z_paths[k]
+        z_path = np.zeros_like(path.real)
 
         surf.remove()
         line.remove()
@@ -430,8 +395,8 @@ def plot_geo_as_animation(frames, frame_times, r, theta, interval_ms=100):
 
         surf = ax.plot_surface(X, Y, Z, cmap="jet", vmin=zmin, vmax=zmax, shade=True, alpha=0.85)
         line, = ax.plot(path.real, path.imag, z_path, color="black", linewidth=2.5)
-        start = ax.scatter([path[0].real], [path[0].imag], [z_path[0]], color="tab:green", s=40)
-        end = ax.scatter([path[-1].real], [path[-1].imag], [z_path[-1]], color="tab:red", s=40)
+        start = ax.scatter([path[0].real], [path[0].imag], [0], color="tab:green", s=40)
+        end = ax.scatter([path[-1].real], [path[-1].imag], [0], color="tab:red", s=40)
         ax.set_title(f"Geodesic on frame {k} at t = {frame_times[k]:.4f} s")
         return (surf, line, start, end)
 

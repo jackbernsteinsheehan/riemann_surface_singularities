@@ -28,6 +28,46 @@
     \draw[darkgray, thick] (0.1, 4) -- (-0.1, 4) node[left, text=darkgray] {$2\pi$};
 
     % Lattice points
+    % For x=0, all y values are the same, representing the pole
+    \pgfmathsetmacro{\leftcolval}{5.0 + 0.4*rand}
+    \foreach \y in {0, 1, ..., 4} {
+        \fill[black] (0, \y) circle (1.5pt) node[above, font=\scriptsize] {\pgfmathprintnumber[fixed, precision=1, fixed zerofill]{\leftcolval}};
+    }
+
+    % For x > 0, top and bottom rows match to show periodic boundary
+    \foreach \x in {1, ..., 4} {
+        \pgfmathsetmacro{\randval}{5.0 + 0.4*rand}
+        \fill[black] (\x, 0) circle (1.5pt) node[above, font=\scriptsize] {\pgfmathprintnumber[fixed, precision=1, fixed zerofill]{\randval}};
+        \fill[black] (\x, 4) circle (1.5pt) node[above, font=\scriptsize] {\pgfmathprintnumber[fixed, precision=1, fixed zerofill]{\randval}};
+        \foreach \y in {1, 2, 3} {
+            \pgfmathsetmacro{\midval}{5.0 + 0.4*rand}
+            \fill[black] (\x, \y) circle (1.5pt) node[above, font=\scriptsize] {\pgfmathprintnumber[fixed, precision=1, fixed zerofill]{\midval}};
+        }
+    }
+\end{tikzpicture}
+\end{center}
+\vspace{2cm}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.2]
+    % Axes
+    \draw[darkgray, thick, ->] (0,0) -- (4.5,0) node[right] {$x$};
+    \draw[darkgray, thick, ->] (0,0) -- (0,4.5) node[above] {$y$};
+
+    % Tick marks
+    \node[left, text=darkgray] at (-0.1,0) {$0$};
+    \node[below, text=darkgray] at (0,-0.1) {$0$};
+    \foreach \x in {1, 2, 3} {
+        \draw[darkgray, thick] (\x, 0.1) -- (\x, -0.1);
+    }
+    \draw[darkgray, thick] (4, 0.1) -- (4, -0.1) node[below, text=darkgray] {$1$};
+
+    \foreach \y in {1, 2, 3} {
+        \draw[darkgray, thick] (0.1, \y) -- (-0.1, \y);
+    }
+    \draw[darkgray, thick] (0.1, 4) -- (-0.1, 4) node[left, text=darkgray] {$1$};
+
+    % Lattice points
     \foreach \x in {0, 1, ..., 4} {
         \foreach \y in {0, 1, ..., 4} {
             \pgfmathsetmacro{\randval}{5.0 + 0.4*rand}
