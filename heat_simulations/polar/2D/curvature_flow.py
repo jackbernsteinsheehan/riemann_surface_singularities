@@ -64,7 +64,7 @@ def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plo
 
         u_next[1:-1] = w[1:-1] + dt * a * (RHO * w[1:-1] + laplacian(np.log(w),r,dr,theta,dtheta))
 
-        u_next[-1, :] = np.cos(2 * theta) + 2
+        u_next[-1, :] = 4*np.cos(2 * theta) + 4.1
         
 
         u, u_next = u_next, u
@@ -115,7 +115,7 @@ def set_boundary(w:np.ndarray, theta):
     '''returns a copy of w with boundary conditions enforced. W should be a 2d array representing
     the temp at one time t. w[i, j] is temp at radius i, angle j for a given time.'''
     l = w.copy()
-    l[-1, :] = 2 + np.cos(10 * theta)
+    l[-1, :] = 2.1 + 2*np.cos(10 * theta)
     return l
 
 
