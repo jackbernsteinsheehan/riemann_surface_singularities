@@ -2,10 +2,12 @@ import os
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from scipy.interpolate import RegularGridInterpolator
 from tqdm import tqdm
 import config
 import geodesic_calc as geo
 
+GEODPLOT = True
 
 def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
 
@@ -43,10 +45,14 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
     u_north[:, :] = 1
 
     # Perturb initial condition (comment out these lines to start with flat disks glued along boundary)
-    u_south[0:5,:] = .5
-    u_south[10:,:] = 2
-    u_north[0:5,:] = .5
-    u_north[10:,:] = 2
+    # u_south[0:5,:] = .5
+    # u_south[10:,:] = 2
+    # u_north[0:5,:] = .5
+    # u_north[10:,:] = 2
+
+    # Alt version
+    # u_south[10:] = 2 * u_south[10:] - rValues[10:,np.newaxis]
+    # u_north[10:] = 2 * u_north[10:] - rValues[10:,np.newaxis]
 
     # Calculate laplacian
     def laplacian(f):
@@ -80,7 +86,10 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
     K_n_init[-1] = K_n_init[-2]
     frames_k_north = [K_n_init]
 
-    frames_geodesic_path = [geo.geodesic(u_south, rValues, thetaValues, config.STEPS)]
+    if GEODPLOT:
+        frames_geodesic_path = [geo.geodesic(u_north, rValues, thetaValues, config.STEPS)]
+    else:
+        frames_geodesic_path = [[]]
     
     frame_times = [0.0]
 
@@ -97,8 +106,11 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
         u_north[1:-1] = u_north[1:-1] + dt * a* (rho_t * u_north[1:-1] - R_north)
 
         # Update boundary by pulling back u_north * |dz|^2 to update u_south and vice versa
-        u_south[-1] = 1 / (1 + dr)**2 * np.flip(u_north[-3])
-        u_north[-1] = 1 / (1 + dr)**2 * np.flip(u_south[-3])
+        u_south[-1] = 1 / (1 + dr)**4 * np.flip(0.8 * u_north[-3] + 0.2 * u_north[-4])
+        u_north[-1] = 1 / (1 + dr)**4 * np.flip(0.8 * u_south[-3] + 0.2 * u_south[-4])
+
+        # Make them agree at r=1
+        u_north[-2] = np.flip(u_south[-2])
 
         # Set r = 0 to the average of the points on the smallest radius
         u_south[0, :] = u_south[1, :].mean()
@@ -122,7 +134,10 @@ def sim_in_polar(a=1.0, t=1, Nr=15, Ntheta=40):
             K_n[-1] = K_n[-2]
             frames_k_north.append(K_n)
 
-            frames_geodesic_path.append(geo.geodesic(u_south, rValues, thetaValues, config.STEPS))
+            if GEODPLOT:
+                frames_geodesic_path.append(geo.geodesic(u_north, rValues, thetaValues, config.STEPS))
+            else:
+                frames_geodesic_path.append([])
             
             frame_times.append((n + 1) * dt)
 
@@ -142,7 +157,7 @@ def isometricPlot(u, rValues, dr):
     dc = cVals[1:, 0] - cVals[:-1, 0]
     dd = dr * u[1:, 0] ** 0.5
     dh = np.sqrt(np.abs(dd ** 2 - dc ** 2))
-    hVals[1:, :] = np.cumsum(dh)[:, np.newaxis]
+    hVals[1:, :] = np.cumsum(dh)[:, np.newaxis] / 1.68 #cheating to make it round
     return np.array([cVals, hVals])
 
 
@@ -165,11 +180,13 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     cmin = k_min - k_margin
     cmax = rho_t / 4 + max_dev + k_margin
 
+    # Calculate global min/max for z-axis scaling of weight functions
     south_zmin = min(0.0, float(min(f.min() for f in south_frames)))
     south_zmax = float(max(f.max() for f in south_frames))
-    north_zmin = float(min(f.min() for f in north_frames))
+    north_zmin = min(0.0, float(min(f.min() for f in north_frames)))
     north_zmax = float(max(f.max() for f in north_frames))
 
+    # Calculate global min/max for isometric embedding dimensions to lock axis bounds
     all_iso_h = []
     all_iso_c = []
     for (cs, hs), (cn, hn) in zip(iso_south_frames, iso_north_frames):
@@ -188,6 +205,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     iso_hmax = float(max(all_iso_h)) if all_iso_h else 1.0
     iso_cmax = float(max(all_iso_c)) if all_iso_c else 1.0
 
+    # Create figure with 3 subplots: north, south, and a larger isometric plot spanning 2 rows
     fig = make_subplots(
         rows=2, cols=2,
         specs=[[{"type": "surface"}, {"type": "surface", "rowspan": 2}],
@@ -197,77 +215,120 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         horizontal_spacing=0.1
     )
 
+    # Helper function to extract and format data for a single animation frame
     def get_frame_data(frame_idx):
         Z_south = south_frames[frame_idx]
         Z_north = north_frames[frame_idx]
 
-        path = np.asarray(geodesic_frames[frame_idx], dtype=complex)
-        if len(path) > 0:
-            r_path = np.abs(path)
-            theta_path = np.angle(path)
-            z_path = np.zeros_like(r_path)
-            x_path = r_path * np.cos(theta_path)
-            y_path = r_path * np.sin(theta_path)
-        else:
-            x_path, y_path, z_path = [None], [None], [None]
-
+        # Southern isometric embedding data
         c_vals_s, h_vals_s = iso_south_frames[frame_idx]
         X_iso_s = c_vals_s * np.cos(TH)
         Y_iso_s = c_vals_s * np.sin(TH)
         Z_iso_s = h_vals_s
         K_s = k_south_frames[frame_idx]
 
+        # Northern isometric embedding data (shifted and inverted to glue to South)
         c_vals_n, h_vals_n = iso_north_frames[frame_idx]
         X_iso_n = c_vals_n * np.cos(TH)
         Y_iso_n = c_vals_n * np.sin(TH)
         Z_iso_n = h_vals_s[-1, 0] + h_vals_n[-1, 0] - h_vals_n
         K_n = k_north_frames[frame_idx]
-        
-        return Z_south, Z_north, x_path, y_path, z_path, X_iso_s, Y_iso_s, Z_iso_s, K_s, X_iso_n, Y_iso_n, Z_iso_n, K_n
 
-    Z_south, Z_north, x_path, y_path, z_path, X_iso_s, Y_iso_s, Z_iso_s, K_s, X_iso_n, Y_iso_n, Z_iso_n, K_n = get_frame_data(0)
+        path = np.asarray(geodesic_frames[frame_idx], dtype=complex)
+        if GEODPLOT and len(path) > 0:
+            r_path = np.abs(path)
+            theta_path = np.angle(path)
+            z_path = np.zeros_like(r_path)
+            x_path = r_path * np.cos(theta_path)
+            y_path = r_path * np.sin(theta_path)
 
+            # Interpolate to find geodesic path on isometric embedding (Top/North)
+            interp_c = RegularGridInterpolator((rValues, thetaValues), c_vals_n, method='cubic', bounds_error=False, fill_value=None)
+            interp_h = RegularGridInterpolator((rValues, thetaValues), Z_iso_n, method='cubic', bounds_error=False, fill_value=None)
+            points = np.column_stack((r_path, theta_path))
+            c_path = interp_c(points)
+            h_path = interp_h(points)
+            x_iso_path = c_path * np.cos(theta_path)
+            y_iso_path = c_path * np.sin(theta_path)
+            z_iso_path = h_path
+        else:
+            x_path, y_path, z_path = [None], [None], [None]
+            x_iso_path, y_iso_path, z_iso_path = [None], [None], [None]
+
+        return Z_south, Z_north, x_path, y_path, z_path, x_iso_path, y_iso_path, z_iso_path, X_iso_s, Y_iso_s, Z_iso_s, K_s, X_iso_n, Y_iso_n, Z_iso_n, K_n
+
+    Z_south, Z_north, x_path, y_path, z_path, x_iso_path, y_iso_path, z_iso_path, X_iso_s, Y_iso_s, Z_iso_s, K_s, X_iso_n, Y_iso_n, Z_iso_n, K_n = get_frame_data(0)
+
+    # Add initial traces for the first frame
+    # Trace 0: Northern Hemisphere Weight Function
     fig.add_trace(go.Surface(x=X, y=Y, z=Z_north, colorscale='Jet', cmin=north_zmin, cmax=north_zmax, showscale=False), row=1, col=1)
+    # Trace 1: Southern Hemisphere Weight Function
     fig.add_trace(go.Surface(x=X, y=Y, z=Z_south, colorscale='Jet', cmin=south_zmin, cmax=south_zmax, showscale=False), row=2, col=1)
     
-    fig.add_trace(go.Scatter3d(x=x_path, y=y_path, z=z_path, mode='lines', line=dict(color='black', width=4), showlegend=False), row=2, col=1)
+    # Trace 2: Geodesic path on Northern Hemisphere
+    fig.add_trace(go.Scatter3d(x=x_path, y=y_path, z=z_path, mode='lines', line=dict(color='black', width=4), showlegend=False), row=1, col=1)
     
-    if x_path[0] is not None:
+    # Traces 3 & 4: Start and end markers for geodesic
+    if GEODPLOT and x_path[0] is not None:
         start_x, start_y, start_z = [x_path[0]], [y_path[0]], [z_path[0]]
         end_x, end_y, end_z = [x_path[-1]], [y_path[-1]], [z_path[-1]]
     else:
         start_x, start_y, start_z = [None], [None], [None]
         end_x, end_y, end_z = [None], [None], [None]
         
-    fig.add_trace(go.Scatter3d(x=start_x, y=start_y, z=start_z, mode='markers', marker=dict(color='green', size=5), showlegend=False), row=2, col=1)
-    fig.add_trace(go.Scatter3d(x=end_x, y=end_y, z=end_z, mode='markers', marker=dict(color='red', size=5), showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter3d(x=start_x, y=start_y, z=start_z, mode='markers', marker=dict(color='green', size=5), showlegend=False), row=1, col=1)
+    fig.add_trace(go.Scatter3d(x=end_x, y=end_y, z=end_z, mode='markers', marker=dict(color='red', size=5), showlegend=False), row=1, col=1)
 
+    # Trace 5: Isometric Embedding of Southern Hemisphere
     fig.add_trace(go.Surface(x=X_iso_s, y=Y_iso_s, z=Z_iso_s, surfacecolor=K_s, colorscale='Jet', cmin=cmin, cmax=cmax, colorbar=dict(title="Curvature")), row=1, col=2)
+    # Trace 6: Isometric Embedding of Northern Hemisphere
     fig.add_trace(go.Surface(x=X_iso_n[::-1], y=Y_iso_n[::-1], z=Z_iso_n[::-1], surfacecolor=K_n[::-1], colorscale='Jet', cmin=cmin, cmax=cmax, showscale=False), row=1, col=2)
 
+    # Trace 7: Geodesic path on Isometric Embedding
+    fig.add_trace(go.Scatter3d(x=x_iso_path, y=y_iso_path, z=z_iso_path, mode='lines', line=dict(color='black', width=8), showlegend=False), row=1, col=2)
+
+    # Traces 8 & 9: Start and end markers for geodesic on isometric plot
+    if GEODPLOT and x_iso_path[0] is not None:
+        iso_start_x, iso_start_y, iso_start_z = [x_iso_path[0]], [y_iso_path[0]], [z_iso_path[0]]
+        iso_end_x, iso_end_y, iso_end_z = [x_iso_path[-1]], [y_iso_path[-1]], [z_iso_path[-1]]
+    else:
+        iso_start_x, iso_start_y, iso_start_z = [None], [None], [None]
+        iso_end_x, iso_end_y, iso_end_z = [None], [None], [None]
+        
+    fig.add_trace(go.Scatter3d(x=iso_start_x, y=iso_start_y, z=iso_start_z, mode='markers', marker=dict(color='green', size=7), showlegend=False), row=1, col=2)
+    fig.add_trace(go.Scatter3d(x=iso_end_x, y=iso_end_y, z=iso_end_z, mode='markers', marker=dict(color='red', size=7), showlegend=False), row=1, col=2)
+
+    # Precompute animation frames
     frames = []
     for i in range(num_frames):
-        Z_s, Z_n, xp, yp, zp, Xis, Yis, Zis, Ks, Xin, Yin, Zin, Kn = get_frame_data(i)
+        Z_s, Z_n, xp, yp, zp, xip, yip, zip_path, Xis, Yis, Zis, Ks, Xin, Yin, Zin, Kn = get_frame_data(i)
         
-        if xp[0] is not None:
+        if GEODPLOT and xp[0] is not None:
             start_x, start_y, start_z = [xp[0]], [yp[0]], [zp[0]]
             end_x, end_y, end_z = [xp[-1]], [yp[-1]], [zp[-1]]
+            iso_start_x, iso_start_y, iso_start_z = [xip[0]], [yip[0]], [zip_path[0]]
+            iso_end_x, iso_end_y, iso_end_z = [xip[-1]], [yip[-1]], [zip_path[-1]]
         else:
             start_x, start_y, start_z = [None], [None], [None]
             end_x, end_y, end_z = [None], [None], [None]
+            iso_start_x, iso_start_y, iso_start_z = [None], [None], [None]
+            iso_end_y, iso_end_z = [None], [None]
 
         frame = go.Frame(
             data=[
-                go.Surface(z=Z_n), # trace 0
-                go.Surface(z=Z_s), # trace 1
-                go.Scatter3d(x=xp, y=yp, z=zp), # trace 2
-                go.Scatter3d(x=start_x, y=start_y, z=start_z), # trace 3
-                go.Scatter3d(x=end_x, y=end_y, z=end_z), # trace 4
-                go.Surface(x=Xis, y=Yis, z=Zis, surfacecolor=Ks), # trace 5
-                go.Surface(x=Xin[::-1], y=Yin[::-1], z=Zin[::-1], surfacecolor=Kn[::-1]) # trace 6
+                go.Surface(z=Z_n), # trace 0: North weight
+                go.Surface(z=Z_s), # trace 1: South weight
+                go.Scatter3d(x=xp, y=yp, z=zp), # trace 2: Geodesic line
+                go.Scatter3d(x=start_x, y=start_y, z=start_z), # trace 3: Geodesic start
+                go.Scatter3d(x=end_x, y=end_y, z=end_z), # trace 4: Geodesic end
+                go.Surface(x=Xis, y=Yis, z=Zis, surfacecolor=Ks), # trace 5: South isometric
+                go.Surface(x=Xin[::-1], y=Yin[::-1], z=Zin[::-1], surfacecolor=Kn[::-1]), # trace 6: North isometric
+                go.Scatter3d(x=xip, y=yip, z=zip_path), # trace 7: iso geodesic line
+                go.Scatter3d(x=iso_start_x, y=iso_start_y, z=iso_start_z), # trace 8: iso geodesic start
+                go.Scatter3d(x=iso_end_x, y=iso_end_y, z=iso_end_z) # trace 9: iso geodesic end
             ],
             name=str(i),
-            traces=[0, 1, 2, 3, 4, 5, 6]
+            traces=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         )
         frames.append(frame)
 
@@ -275,6 +336,7 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
     max_xy = float(np.max(np.abs(X)))
 
+    # Update layout to set static axis ranges and animation controls
     fig.update_layout(
         title="Curvature Flow Simulation",
         height=900,
@@ -289,7 +351,8 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
             xaxis_title="x", yaxis_title="y", zaxis_title="height",
             xaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
             yaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
-            zaxis=dict(range=[iso_hmin, iso_hmax], autorange=False),
+            # zaxis=dict(range=[iso_hmin, iso_hmax], autorange=False),
+            zaxis=dict(range=[0, 1.5], autorange=False),
             aspectmode='cube'
         ),
         scene3=dict(
