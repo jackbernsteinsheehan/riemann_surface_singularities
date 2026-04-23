@@ -134,7 +134,7 @@ def set_boundary(w:np.ndarray, theta):
     '''returns a copy of w with boundary conditions enforced. W should be a 2d array representing
     the temp at one time t. w[i, j] is temp at radius i, angle j for a given time.'''
     l = w.copy()
-    l[-1, :] = np.cos(6 * theta)
+    l[-1, :] = np.cos(3 * theta)
     return l
 
 

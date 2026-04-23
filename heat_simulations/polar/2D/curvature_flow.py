@@ -48,13 +48,14 @@ def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plo
     u[:, :] = 2    
 
     # Set boundary condition
-    u = set_boundary(u, theta)
+    #u = set_boundary(u, theta)
 
     # set frames for displaying (parallel lists)
     frames = []
     frame_times = []
     save_every = config.SAVE_EVERY
     u_next = np.zeros_like(u)+2
+    u_next[-1, :] = 2
 
     # The model: updates for each time step t
 
@@ -64,7 +65,8 @@ def sim_in_polar(a=config.A, t=config.T, Nr=config.Nr, Ntheta=config.Ntheta, plo
 
         u_next[1:-1] = w[1:-1] + dt * a * (RHO * w[1:-1] + laplacian(np.log(w),r,dr,theta,dtheta))
 
-        u_next[-1, :] = 4*np.cos(2 * theta) + 4.1
+        #u_next[-1, :] = 2*np.cos(2 * theta) + 2.1
+        u_next[-1, :] = 1
         
 
         u, u_next = u_next, u
