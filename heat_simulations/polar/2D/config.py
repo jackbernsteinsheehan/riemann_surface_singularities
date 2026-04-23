@@ -13,8 +13,9 @@ RHO = 0
 
 
 # --- Geodesic params --- #
-P = 0.75 - 0.6j
-V = -0.35 + 0.0j
+P = -0.65 - 0.45j
+V = 0.25 + 0.28j
+
 U_IDX = 50 # determines which weight function from the frames object will be used
 STEPS = 8000 # Number of iterations in geodesic calculation
-GEO_PLOT = False # Show geodesic path on a 2D circle
+GEO_PLOT = True # Show geodesic path on a 2D circle
