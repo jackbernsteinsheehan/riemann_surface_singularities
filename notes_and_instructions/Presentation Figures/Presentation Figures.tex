@@ -77,4 +77,58 @@
 \end{tikzpicture}
 \end{center}
 
+\begin{center}
+\begin{tikzpicture}[scale=1.2]
+    % Axes (Greyed out)
+    \draw[lightgray, thick, ->] (0,0) -- (4.5,0) node[right] {$x$};
+    \draw[lightgray, thick, ->] (0,0) -- (0,4.5) node[above] {$y$};
+
+    % Tick marks (Greyed out)
+    \node[left, text=lightgray] at (-0.1,0) {$0$};
+    \node[below, text=lightgray] at (0,-0.1) {$0$};
+    \foreach \x in {1, 2, 3} {
+        \draw[lightgray, thick] (\x, 0.1) -- (\x, -0.1);
+    }
+    \draw[lightgray, thick] (4, 0.1) -- (4, -0.1) node[below, text=lightgray] {$1$};
+
+    \foreach \y in {1, 2, 3} {
+        \draw[lightgray, thick] (0.1, \y) -- (-0.1, \y);
+    }
+    \draw[lightgray, thick] (0.1, 4) -- (-0.1, 4) node[left, text=lightgray] {$1$};
+
+    % Lattice points (Greyed out)
+    \foreach \x in {0, 1, ..., 4} {
+        \foreach \y in {0, 1, ..., 4} {
+            \pgfmathsetmacro{\randval}{5.0 + 0.4*rand}
+            \fill[lightgray] (\x, \y) circle (1.5pt) node[above, font=\scriptsize, text=lightgray] {\pgfmathprintnumber[fixed, precision=1, fixed zerofill]{\randval}};
+        }
+    }
+    
+    % Path for gamma (smooth curve)
+    \draw[thick] plot coordinates {(0.5, 0.5) (1.6, 1.2) (2.7, 1.8) (3.6, 2.1)};
+    
+    % Gamma points
+    \fill (0.5, 0.5) circle (1.5pt) node[below left] {$\gamma(0)$};
+    \fill (1.6, 1.2) circle (1.5pt) node[above left] {$\gamma(t_1)$};
+    \fill (2.7, 1.8) circle (1.5pt) node[above left] {$\gamma(t_2)$};
+    \fill (3.6, 2.1) circle (1.5pt) node[above right] {$\gamma(t_3)$};
+    
+    % Initial velocity
+    \draw[->, thick] (0.5, 0.5) -- ++(1.1, 0.7);
+    
+    % Current vector \dot\gamma
+    \draw[->, thick] (3.6, 2.1) -- ++(0.88, 0.1) node[above right] {$\dot\gamma(t_3)$};
+    
+    % Nearest grid point
+    \fill[red] (4, 2) circle (1.5pt) node[below right, text=red] {$(x,y)$};
+    \fill[red] (3, 2) circle (1.5pt);
+    \fill[red] (4, 3) circle (1.5pt);
+    
+    % Dashed line for first differences
+    \draw[dashed, red] (4, 2) -- (3, 2);
+    \draw[dashed, red] (4, 2) -- (4, 3);
+    
+\end{tikzpicture}
+\end{center}
+
 \end{document}

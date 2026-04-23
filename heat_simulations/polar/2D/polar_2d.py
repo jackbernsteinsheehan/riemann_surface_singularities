@@ -8,7 +8,7 @@ import config
 
 BETA = 0
 
-def sim_in_polar(a=1.0, t=1.0, Nr=30, Ntheta=90):
+def sim_in_polar(a=1.0, t=1.0, Nr=30, Ntheta=60):
 
     # Get radii in [0,1]
     r = np.linspace(0.0, 1.0, Nr)
@@ -45,7 +45,10 @@ def sim_in_polar(a=1.0, t=1.0, Nr=30, Ntheta=90):
 
 
     # Set init condition
-    u[:, :] = 2    
+    u[:, :] = 0
+
+    # Puts bump in the middle
+    u[0:10,:] = np.ones_like(u[0:10,:]) * 2
 
     # Set boundary condition
     u = set_boundary(u, theta)
@@ -88,7 +91,12 @@ def sim_in_polar(a=1.0, t=1.0, Nr=30, Ntheta=90):
         #         u_next[i, j] = w[i, j] + dt * a * (u_rr + (1/radius * u_r) + 1/(radius**2)*(u_theta_theta))
 
         # Update in place instead of calling the function...might be faster
-        u_next[-1, :] = np.cos(6 * theta)
+
+        # Combination of frequencies
+        u_next[-1, :] = 0.75 * np.cos(10 * theta) + 2 * np.sin(theta)
+
+        # Flat boundary
+        # u_next[-1] = 0
         
 
         u, u_next = u_next, u
