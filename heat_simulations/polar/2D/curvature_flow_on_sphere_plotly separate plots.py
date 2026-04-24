@@ -1,6 +1,4 @@
 import os
-import tempfile
-import imageio
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -207,15 +205,16 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
     iso_hmax = float(max(all_iso_h)) if all_iso_h else 1.0
     iso_cmax = float(max(all_iso_c)) if all_iso_c else 1.0
 
-    # Create figure with 3 subplots: north, south, and a larger isometric plot spanning 2 rows
-    fig = make_subplots(
-        rows=2, cols=2,
-        specs=[[{"type": "surface"}, {"type": "surface", "rowspan": 2}],
-               [{"type": "surface"}, None]],
-        subplot_titles=("Northern Hemisphere Weight", "Isometric Embedding", "Southern Hemisphere Weight"),
-        vertical_spacing=0.1,
+    # Figure 1: Weight Functions (Side-by-Side)
+    fig_weights = make_subplots(
+        rows=1, cols=2,
+        specs=[[{"type": "surface"}, {"type": "surface"}]],
+        subplot_titles=("Northern Hemisphere Weight", "Southern Hemisphere Weight"),
         horizontal_spacing=0.1
     )
+
+    # Figure 2: Isometric Embedding
+    fig_iso = go.Figure()
 
     # Helper function to extract and format data for a single animation frame
     def get_frame_data(frame_idx):
@@ -263,12 +262,12 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
 
     # Add initial traces for the first frame
     # Trace 0: Northern Hemisphere Weight Function
-    fig.add_trace(go.Surface(x=X, y=Y, z=Z_north, colorscale='Jet', cmin=north_zmin, cmax=north_zmax, showscale=False), row=1, col=1)
+    fig_weights.add_trace(go.Surface(x=X, y=Y, z=Z_north, colorscale='Jet', cmin=north_zmin, cmax=north_zmax, showscale=False), row=1, col=1)
     # Trace 1: Southern Hemisphere Weight Function
-    fig.add_trace(go.Surface(x=X, y=Y, z=Z_south, colorscale='Jet', cmin=south_zmin, cmax=south_zmax, showscale=False), row=2, col=1)
+    fig_weights.add_trace(go.Surface(x=X, y=Y, z=Z_south, colorscale='Jet', cmin=south_zmin, cmax=south_zmax, showscale=False), row=1, col=2)
     
     # Trace 2: Geodesic path on Northern Hemisphere
-    fig.add_trace(go.Scatter3d(x=x_path, y=y_path, z=z_path, mode='lines', line=dict(color='black', width=4), showlegend=False), row=1, col=1)
+    fig_weights.add_trace(go.Scatter3d(x=x_path, y=y_path, z=z_path, mode='lines', line=dict(color='black', width=4), showlegend=False), row=1, col=1)
     
     # Traces 3 & 4: Start and end markers for geodesic
     if GEODPLOT and x_path[0] is not None:
@@ -278,16 +277,16 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         start_x, start_y, start_z = [None], [None], [None]
         end_x, end_y, end_z = [None], [None], [None]
         
-    fig.add_trace(go.Scatter3d(x=start_x, y=start_y, z=start_z, mode='markers', marker=dict(color='green', size=5), showlegend=False), row=1, col=1)
-    fig.add_trace(go.Scatter3d(x=end_x, y=end_y, z=end_z, mode='markers', marker=dict(color='red', size=5), showlegend=False), row=1, col=1)
+    fig_weights.add_trace(go.Scatter3d(x=start_x, y=start_y, z=start_z, mode='markers', marker=dict(color='green', size=5), showlegend=False), row=1, col=1)
+    fig_weights.add_trace(go.Scatter3d(x=end_x, y=end_y, z=end_z, mode='markers', marker=dict(color='red', size=5), showlegend=False), row=1, col=1)
 
     # Trace 5: Isometric Embedding of Southern Hemisphere
-    fig.add_trace(go.Surface(x=X_iso_s, y=Y_iso_s, z=Z_iso_s, surfacecolor=K_s, colorscale='Jet', cmin=cmin, cmax=cmax, colorbar=dict(title="Curvature")), row=1, col=2)
+    fig_iso.add_trace(go.Surface(x=X_iso_s, y=Y_iso_s, z=Z_iso_s, surfacecolor=K_s, colorscale='Jet', cmin=cmin, cmax=cmax, colorbar=dict(title="Curvature")))
     # Trace 6: Isometric Embedding of Northern Hemisphere
-    fig.add_trace(go.Surface(x=X_iso_n[::-1], y=Y_iso_n[::-1], z=Z_iso_n[::-1], surfacecolor=K_n[::-1], colorscale='Jet', cmin=cmin, cmax=cmax, showscale=False), row=1, col=2)
+    fig_iso.add_trace(go.Surface(x=X_iso_n[::-1], y=Y_iso_n[::-1], z=Z_iso_n[::-1], surfacecolor=K_n[::-1], colorscale='Jet', cmin=cmin, cmax=cmax, showscale=False))
 
     # Trace 7: Geodesic path on Isometric Embedding
-    fig.add_trace(go.Scatter3d(x=x_iso_path, y=y_iso_path, z=z_iso_path, mode='lines', line=dict(color='black', width=8), showlegend=False), row=1, col=2)
+    fig_iso.add_trace(go.Scatter3d(x=x_iso_path, y=y_iso_path, z=z_iso_path, mode='lines', line=dict(color='black', width=8), showlegend=False))
 
     # Traces 8 & 9: Start and end markers for geodesic on isometric plot
     if GEODPLOT and x_iso_path[0] is not None:
@@ -297,11 +296,12 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
         iso_start_x, iso_start_y, iso_start_z = [None], [None], [None]
         iso_end_x, iso_end_y, iso_end_z = [None], [None], [None]
         
-    fig.add_trace(go.Scatter3d(x=iso_start_x, y=iso_start_y, z=iso_start_z, mode='markers', marker=dict(color='green', size=7), showlegend=False), row=1, col=2)
-    fig.add_trace(go.Scatter3d(x=iso_end_x, y=iso_end_y, z=iso_end_z, mode='markers', marker=dict(color='red', size=7), showlegend=False), row=1, col=2)
+    fig_iso.add_trace(go.Scatter3d(x=iso_start_x, y=iso_start_y, z=iso_start_z, mode='markers', marker=dict(color='green', size=7), showlegend=False))
+    fig_iso.add_trace(go.Scatter3d(x=iso_end_x, y=iso_end_y, z=iso_end_z, mode='markers', marker=dict(color='red', size=7), showlegend=False))
 
     # Precompute animation frames
-    frames = []
+    frames_weights = []
+    frames_iso = []
     for i in range(num_frames):
         Z_s, Z_n, xp, yp, zp, xip, yip, zip_path, Xis, Yis, Zis, Ks, Xin, Yin, Zin, Kn = get_frame_data(i)
         
@@ -314,15 +314,23 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
             start_x, start_y, start_z = [None], [None], [None]
             end_x, end_y, end_z = [None], [None], [None]
             iso_start_x, iso_start_y, iso_start_z = [None], [None], [None]
-            iso_end_y, iso_end_z = [None], [None]
+            iso_end_x, iso_end_y, iso_end_z = [None], [None], [None]
 
-        frame = go.Frame(
+        frame_weights = go.Frame(
             data=[
                 go.Surface(z=Z_n), # trace 0: North weight
                 go.Surface(z=Z_s), # trace 1: South weight
                 go.Scatter3d(x=xp, y=yp, z=zp), # trace 2: Geodesic line
                 go.Scatter3d(x=start_x, y=start_y, z=start_z), # trace 3: Geodesic start
-                go.Scatter3d(x=end_x, y=end_y, z=end_z), # trace 4: Geodesic end
+                go.Scatter3d(x=end_x, y=end_y, z=end_z) # trace 4: Geodesic end
+            ],
+            name=str(i),
+            traces=[0, 1, 2, 3, 4]
+        )
+        frames_weights.append(frame_weights)
+
+        frame_iso = go.Frame(
+            data=[
                 go.Surface(x=Xis, y=Yis, z=Zis, surfacecolor=Ks), # trace 5: South isometric
                 go.Surface(x=Xin[::-1], y=Yin[::-1], z=Zin[::-1], surfacecolor=Kn[::-1]), # trace 6: North isometric
                 go.Scatter3d(x=xip, y=yip, z=zip_path), # trace 7: iso geodesic line
@@ -330,18 +338,70 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
                 go.Scatter3d(x=iso_end_x, y=iso_end_y, z=iso_end_z) # trace 9: iso geodesic end
             ],
             name=str(i),
-            traces=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            traces=[0, 1, 2, 3, 4]
         )
-        frames.append(frame)
+        frames_iso.append(frame_iso)
 
-    fig.frames = frames
+    fig_weights.frames = frames_weights
+    fig_iso.frames = frames_iso
 
     max_xy = float(np.max(np.abs(X)))
 
-    # Update layout to set static axis ranges and animation controls
-    fig.update_layout(
-        title="Curvature Flow Simulation",
-        height=900,
+    # Create reusable animation controls (play/pause and slider)
+    updatemenus = [{
+        "buttons": [
+            {
+                "args": [None, {"frame": {"duration": 100, "redraw": True}, "fromcurrent": True, "transition": {"duration": 0}}],
+                "label": "Play",
+                "method": "animate"
+            },
+            {
+                "args": [[None], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate", "transition": {"duration": 0}}],
+                "label": "Pause",
+                "method": "animate"
+            }
+        ],
+        "direction": "left",
+        "pad": {"r": 10, "t": 87},
+        "showactive": False,
+        "type": "buttons",
+        "x": 0.1,
+        "xanchor": "right",
+        "y": 0,
+        "yanchor": "top"
+    }]
+    
+    sliders = [{
+        "active": 0,
+        "yanchor": "top",
+        "xanchor": "left",
+        "currentvalue": {
+            "font": {"size": 20},
+            "prefix": "Frame: ",
+            "visible": True,
+            "xanchor": "right"
+        },
+        "transition": {"duration": 0},
+        "pad": {"b": 10, "t": 50},
+        "len": 0.9,
+        "x": 0.1,
+        "y": 0,
+        "steps": [
+            {
+                "args": [
+                    [str(i)],
+                    {"frame": {"duration": 0, "redraw": True}, "mode": "immediate", "transition": {"duration": 0}}
+                ],
+                "label": str(i),
+                "method": "animate"
+            } for i in range(num_frames)
+        ]
+    }]
+
+    # Update layout to set static axis ranges and animation controls for weight functions
+    fig_weights.update_layout(
+        title="Weight Functions Flow",
+        height=600,
         scene=dict(
             xaxis_title="x", yaxis_title="y", zaxis_title="u_north",
             xaxis=dict(range=[-max_xy, max_xy], autorange=False),
@@ -350,112 +410,33 @@ def plot_simulation(south_frames, north_frames, iso_south_frames, iso_north_fram
             aspectmode='cube'
         ),
         scene2=dict(
-            xaxis_title="x", yaxis_title="y", zaxis_title="height",
-            xaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
-            yaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
-            # zaxis=dict(range=[iso_hmin, iso_hmax], autorange=False),
-            zaxis=dict(range=[0, 1.5], autorange=False),
-            aspectmode='cube'
-        ),
-        scene3=dict(
             xaxis_title="x", yaxis_title="y", zaxis_title="u_south",
             xaxis=dict(range=[-max_xy, max_xy], autorange=False),
             yaxis=dict(range=[-max_xy, max_xy], autorange=False),
             zaxis=dict(range=[south_zmin, south_zmax], autorange=False),
             aspectmode='cube'
         ),
-        updatemenus=[{
-            "buttons": [
-                {
-                    "args": [None, {"frame": {"duration": 100, "redraw": True}, "fromcurrent": True, "transition": {"duration": 0}}],
-                    "label": "Play",
-                    "method": "animate"
-                },
-                {
-                    "args": [[None], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate", "transition": {"duration": 0}}],
-                    "label": "Pause",
-                    "method": "animate"
-                }
-            ],
-            "direction": "left",
-            "pad": {"r": 10, "t": 87},
-            "showactive": False,
-            "type": "buttons",
-            "x": 0.1,
-            "xanchor": "right",
-            "y": 0,
-            "yanchor": "top"
-        }],
-        sliders=[{
-            "active": 0,
-            "yanchor": "top",
-            "xanchor": "left",
-            "currentvalue": {
-                "font": {"size": 20},
-                "prefix": "Frame: ",
-                "visible": True,
-                "xanchor": "right"
-            },
-            "transition": {"duration": 0},
-            "pad": {"b": 10, "t": 50},
-            "len": 0.9,
-            "x": 0.1,
-            "y": 0,
-            "steps": [
-                {
-                    "args": [
-                        [str(i)],
-                        {"frame": {"duration": 0, "redraw": True}, "mode": "immediate", "transition": {"duration": 0}}
-                    ],
-                    "label": str(i),
-                    "method": "animate"
-                } for i in range(num_frames)
-            ]
-        }]
+        updatemenus=updatemenus,
+        sliders=sliders
     )
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    output_path = os.path.join(script_dir, "curvature_flow_on_sphere_plotly.mp4")
-    
-    print(f"Exporting video to {output_path} (this may take a while)...")
-    print("Note: This requires 'kaleido' and 'imageio[ffmpeg]' packages (pip install kaleido \"imageio[ffmpeg]\").")
-    
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            writer = imageio.get_writer(output_path, fps=10)
-            
-            imread = getattr(imageio.v2, 'imread', imageio.imread) if hasattr(imageio, 'v2') else imageio.imread
-            
-            for i, frame in enumerate(tqdm(fig.frames, desc="Rendering frames")):
-                # Apply frame data to the figure
-                for j, trace_data in zip(frame.traces, frame.data):
-                    fig.data[j].update(trace_data)
-                
-                if fig.layout.sliders:
-                    fig.layout.sliders[0].active = i
-                
-                # Write image to temp file
-                img_path = os.path.join(tmpdir, f"frame_{i:04d}.png")
-                fig.write_image(img_path, width=1600, height=900)
-                
-                # Read and append to video
-                image = imread(img_path)
-                writer.append_data(image)
-                
-            writer.close()
-            
-            # Restore original data for the interactive plot
-            if len(fig.frames) > 0:
-                for j, trace_data in zip(fig.frames[0].traces, fig.frames[0].data):
-                    fig.data[j].update(trace_data)
-            if fig.layout.sliders:
-                fig.layout.sliders[0].active = 0
-                
-        print("Video export complete.")
-    except Exception as e:
-        print(f"Failed to export video: {e}")
+    # Update layout to set static axis ranges and animation controls for isometric embedding
+    fig_iso.update_layout(
+        title="Isometric Embedding Flow",
+        height=800,
+        scene=dict(
+            xaxis_title="x", yaxis_title="y", zaxis_title="height",
+            xaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
+            yaxis=dict(range=[-iso_cmax, iso_cmax], autorange=False),
+            zaxis=dict(range=[0, 1.5], autorange=False),
+            aspectmode='cube'
+        ),
+        updatemenus=updatemenus,
+        sliders=sliders
+    )
 
-    fig.show()
+    fig_weights.show()
+    fig_iso.show()
 
 if __name__ == "__main__":
     sim_in_polar()
